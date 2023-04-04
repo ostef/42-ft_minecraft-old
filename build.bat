@@ -21,7 +21,7 @@ set output_name=minecraft.exe
 
 set compiler_flags= /nologo /Oi /Od /Zi
 set compiler_defines=
-set compiler_includes= /Isource\ /Ithird_party\ /Ithird_party\glad\include\ /Ithird_party\glfw-3.3.8\include\
+set compiler_includes= /Isource\ /Ithird_party\ /Ithird_party\glad\include\ /Ithird_party\glfw-3.3.8\include\ /Ithird_party\imgui-1.89.4\
 set compiler_options= %compiler_flags% %compiler_defines% %compiler_includes%
 
 set libs= Shell32.lib Kernel32.lib DbgHelp.lib Opengl32.lib User32.lib Gdi32.lib ^
@@ -38,6 +38,7 @@ if not exist third_party\glad\glad.lib (
 
 cl %compiler_options% -c "source\Core.cpp"
 cl %compiler_options% -c "source\Linalg.cpp"
+cl %compiler_options% -c "source\ImGui.cpp"
 cl %compiler_options% -c "source\main.cpp"
 
-cl %compiler_flags% main.obj Core.obj /link %linker_options% -OUT:%output_name%
+cl %compiler_flags% main.obj Core.obj ImGui.obj /link %linker_options% -OUT:%output_name%
