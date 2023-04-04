@@ -5,3 +5,4 @@ obj/
 *.exe
 .vscode/
 minecraft
+imgui.ini
