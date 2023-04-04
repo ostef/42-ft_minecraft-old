@@ -46,6 +46,7 @@ int main (int argc, const char **args)
 	auto io = ImGui::GetIO ();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+	io.Fonts->AddFontFromFileTTF ("data/Roboto-Regular.ttf", 18);
 
 	ImGui::StyleColorsDark ();
 
