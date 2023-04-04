@@ -36,9 +36,14 @@ if not exist third_party\glad\glad.lib (
 	popd
 )
 
+:: Let's not compile ImGui all the time, we don't really change the source code so this
+:: does not make much sense, especially since this is the longest part of the build
+if not exist ImGui.obj (
+	cl %compiler_options% -c "source\ImGui.cpp"
+)
+
 cl %compiler_options% -c "source\Core.cpp"
 cl %compiler_options% -c "source\Linalg.cpp"
-cl %compiler_options% -c "source\ImGui.cpp"
 cl %compiler_options% -c "source\main.cpp"
 
 cl %compiler_flags% main.obj Core.obj ImGui.obj /link %linker_options% -OUT:%output_name%
