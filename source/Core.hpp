@@ -10,14 +10,26 @@
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 # define PLATFORM_WINDOWS
 # ifdef _WIN64
-#  define PLATFORM_WIN64
-# else
-#  define PLATFORM_WIN32
+# define PLATFORM_64BIT
+#else
+# define PLATFORM_32BIT
 # endif
 #elif __linux__
 # define PLATFORM_LINUX
 #else
 # error "Unsupported compiler"
+#endif
+
+#if __GNUC__
+# if __x86_64__ || __ppc64__
+#  define PLATFORM_64BIT
+# else
+#  define PLATFORM_32BUT
+# endif
+#endif
+
+#if defined(PLATFORM_32BIT) && !defined(ALLOW_32BIT)
+# error "Unsupported platform, only 64-bit platforms are supported"
 #endif
 
 #ifdef STRING_BUILDER_PAGE_SIZE
