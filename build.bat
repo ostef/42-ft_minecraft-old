@@ -22,15 +22,23 @@ set output_name=minecraft.exe
 
 set compiler_flags= /nologo /Oi /Od /Zi
 set compiler_defines=
-set compiler_includes= /Isource\ /Ithird_party\
+set compiler_includes= /Isource\ /Ithird_party\ /Ithird_party\glad\include\ /Ithird_party\glfw-3.3.8\include\
 set compiler_options= %compiler_flags% %compiler_defines% %compiler_includes%
 
-set linker_flags= -incremental:no -opt:ref -subsystem:console
-set libs=Kernel32.lib DbgHelp.lib
+set libs= Shell32.lib Kernel32.lib DbgHelp.lib Opengl32.lib User32.lib Gdi32.lib ^
+	third_party\glad\glad.lib third_party\glfw-3.3.8\lib-vc2019\glfw3_mt.lib
+
+set linker_flags= /incremental:no /opt:ref /subsystem:console
 set linker_options= %libs% %linker_flags%
 
 if not exist %output_obj_dir%\ (
 	mkdir %output_obj_dir%\
+)
+
+if not exist third_party\glad\glad.lib (
+	pushd third_party\glad\
+	call build
+	popd
 )
 
 cl %compiler_options% -c "source\Core.cpp"   /Fo%output_obj_dir%\
