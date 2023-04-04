@@ -75,19 +75,20 @@ typedef double f64;
 # define REPORT_INFO_COLOR "1;32"	// Bold green
 #endif
 
-#define panic(...) {\
+#define panic(...) do {\
 	print ("\n\033[" REPORT_FATAL_COLOR "mPanic\033[0m at file " __FILE__ ":%d\n", __LINE__);\
 	print ("\t" __VA_ARGS__);\
 	print ("\n");\
 	debug_break ();\
-}
+} while (0);
 
-#define assert(expr, ...) {\
+#define assert(expr, ...) do {\
 	if (!(expr)) {\
 		print ("\n\033[" REPORT_FATAL_COLOR "mAssertion failed (" #expr ")\033[0m at file " __FILE__ ":%d\n", __LINE__);\
 		print ("\t" __VA_ARGS__); print ("\n");\
 		debug_break ();\
-	} }
+	}\
+} while (0);
 
 #define cast(T) (T)
 
