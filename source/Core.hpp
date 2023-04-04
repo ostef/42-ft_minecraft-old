@@ -680,7 +680,7 @@ Hash_Map_Iter<Key, Value> hash_map_first (Hash_Map<Key, Value> *map)
 		index += 1;
 
 	if (index >= map->capacity)
-		return {-1, null, null};
+		return {0, null, null};
 
 	return {index, &map->entries[index].key, &map->entries[index].value};
 }
