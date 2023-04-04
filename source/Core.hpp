@@ -36,7 +36,7 @@
 # define STB_SPRINTF_MIN (STRING_BUILDER_PAGE_SIZE / 2)
 #endif
 
-#include "stb_sprintf.h"
+#include <stb_sprintf.h>
 
 #define null nullptr
 
