@@ -17,6 +17,8 @@ where /Q cl.exe || (
 	call "!VS!\VC\Auxiliary\Build\vcvarsall.bat" amd64 || exit /b 1
 )
 
+set always_compile_third_party=0
+
 set output_name=minecraft.exe
 
 set compiler_flags= /nologo /Oi /Od /Zi
@@ -30,13 +32,18 @@ set libs= Shell32.lib Kernel32.lib DbgHelp.lib Opengl32.lib User32.lib Gdi32.lib
 set linker_flags= /incremental:no /opt:ref /subsystem:console
 set linker_options= %libs% %linker_flags%
 
-if not exist glad.obj (
-	cl %compiler_flags% /Ithird_party\glad\include\ -c "third_party\glad\src\glad.c"
+if not exist gl.obj (
+	cl %compiler_flags% /Ithird_party\glad\include\ -c "third_party\glad\src\gl.c"
+) else if %always_compile_third_party% == 1 (
+	cl %compiler_flags% /Ithird_party\glad\include\ -c "third_party\glad\src\gl.c"
 )
+
 
 :: Let's not compile ImGui all the time, we don't really change the source code so this
 :: does not make much sense, especially since this is the longest part of the build
 if not exist ImGui.obj (
+	cl %compiler_options% -c "source\ImGui.cpp"
+) else if %always_compile_third_party% == 1 (
 	cl %compiler_options% -c "source\ImGui.cpp"
 )
 
@@ -44,4 +51,4 @@ cl %compiler_options% -c "source\Core.cpp"
 cl %compiler_options% -c "source\Linalg.cpp"
 cl %compiler_options% -c "source\main.cpp"
 
-cl %compiler_flags% main.obj Core.obj ImGui.obj glad.obj /link %linker_options% -OUT:%output_name%
+cl %compiler_flags% main.obj Core.obj ImGui.obj gl.obj /link %linker_options% -OUT:%output_name%

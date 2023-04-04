@@ -38,8 +38,8 @@ int main (int argc, const char **args)
 	glfwMakeContextCurrent (window);
 	glfwSwapInterval(1);
 
-	gladLoadGLLoader (cast (GLADloadproc) glfwGetProcAddress);
-	println ("GL Version %d.%d", GLVersion.major, GLVersion.minor);
+	int gl_version = gladLoadGL (cast (GLADloadfunc) glfwGetProcAddress);
+	println ("GL Version %d.%d", GLAD_VERSION_MAJOR (gl_version), GLAD_VERSION_MINOR (gl_version));
 
 	glEnable (GL_MULTISAMPLE);
 	glClearColor (0.2, 0.3, 0.6, 1.0);	// Sky color
