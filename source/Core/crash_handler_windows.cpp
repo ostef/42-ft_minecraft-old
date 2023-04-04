@@ -261,7 +261,7 @@ bool g_symbols_initialized;
 
 long handle_exception (EXCEPTION_POINTERS *info)
 {
-	fprint_string (stderr, "\n\033[" REPORT_FATAL_COLOR "mThe compiler crashed due to an internal fatal error\033[0m");
+	fprint_string (stderr, "\n\033[" REPORT_FATAL_COLOR "mThe program crashed\033[0m");
 	switch (info->ExceptionRecord->ExceptionCode)
 	{
 	case EXCEPTION_ACCESS_VIOLATION:
