@@ -3,9 +3,6 @@
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
 Arena     frame_arena;
 Allocator frame_allocator;
 
@@ -25,6 +22,7 @@ int main (int argc, const char **args)
 
 	if (!glfwInit ())
 		return 1;
+
 	defer (glfwTerminate ());
 
 	glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 3);
