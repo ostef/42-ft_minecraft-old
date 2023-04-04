@@ -17,7 +17,6 @@ where /Q cl.exe || (
 	call "!VS!\VC\Auxiliary\Build\vcvarsall.bat" amd64 || exit /b 1
 )
 
-set output_obj_dir=obj
 set output_name=minecraft.exe
 
 set compiler_flags= /nologo /Oi /Od /Zi
@@ -31,17 +30,14 @@ set libs= Shell32.lib Kernel32.lib DbgHelp.lib Opengl32.lib User32.lib Gdi32.lib
 set linker_flags= /incremental:no /opt:ref /subsystem:console
 set linker_options= %libs% %linker_flags%
 
-if not exist %output_obj_dir%\ (
-	mkdir %output_obj_dir%\
-)
-
 if not exist third_party\glad\glad.lib (
 	pushd third_party\glad\
 	call build
 	popd
 )
 
-cl %compiler_options% -c "source\Core.cpp"   /Fo%output_obj_dir%\
-cl %compiler_options% -c "source\main.cpp"   /Fo%output_obj_dir%\
+cl %compiler_options% -c "source\Core.cpp"
+cl %compiler_options% -c "source\Linalg.cpp"
+cl %compiler_options% -c "source\main.cpp"
 
-cl %compiler_flags% %output_obj_dir%\main.obj %output_obj_dir%\Linalg.obj %output_obj_dir%\Core.obj /link %linker_options% -OUT:%output_name%
+cl %compiler_flags% main.obj Core.obj /link %linker_options% -OUT:%output_name%
