@@ -94,10 +94,6 @@ typedef double f64;
 
 #define array_size(a) (sizeof (a) / sizeof (*(a)))
 
-#define min(a, b) ((a) < (b) ? (a) : (b))
-#define max(a, b) ((a) > (b) ? (a) : (b))
-#define clamp(x, a, b) ((x) < (a) ? (a) : ((x) > (b) ? (b) : (x)))
-
 #define for_range(index, low, high) for (s64 index = low; index < high; index += 1)
 #define for_list(it, first) for (auto it = first; it != null; it = it->next)
 #define for_array(index, arr) for (s64 index = 0; index < (arr).count; index += 1)
@@ -124,6 +120,46 @@ privDefer<F> defer_func (F f)
 #define DEFER_2(x, y) DEFER_1 (x, y)
 #define DEFER_3(x)    DEFER_2 (x, __COUNTER__)
 #define defer(code)   auto DEFER_3 (_defer_) = defer_func ([&](){code;})
+
+// Math
+
+int decimal_length (u64 n);
+
+template<typename T>
+T abs (T x)
+{
+	return x > 0 ? x : -x;
+}
+
+template<typename T>
+T min (T a, T b)
+{
+	return a < b ? a : b;
+}
+
+template<typename T>
+T max (T a, T b)
+{
+	return a > b ? a : b;
+}
+
+template<typename T>
+T clamp (T x, T a, T b)
+{
+	return x < a ? a : (x > b ? b : x);
+}
+
+inline
+bool approx_zero (f32 x, f32 epsilon = 0.00001f)
+{
+	return abs (x) <= epsilon;
+}
+
+inline
+bool approx_equals (f32 a, f32 b, f32 epsilon = 0.00001f)
+{
+	return abs (a - b) <= epsilon;
+}
 
 // Memory
 
@@ -298,10 +334,6 @@ wchar_t *utf8_to_wide (String str, s64 *out_length, Allocator allocator);
 
 String filename_get_full (String filename, Allocator allocator);
 String filename_get_parent_dir (String filename);
-
-// Math
-
-int decimal_length (u64 n);
 
 // Array
 
