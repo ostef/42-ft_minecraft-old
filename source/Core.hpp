@@ -270,6 +270,8 @@ bool is_alpha_numeric (char c);
 
 String vfstring (Allocator allocator, const char *fmt_str, va_list va);
 String fstring (Allocator allocator, const char *fmt_str, ...);
+char *vfcstring (Allocator allocator, const char *fmt_str, va_list va);
+char *fcstring (Allocator allocator, const char *fmt_str, ...);
 
 // String Builder
 

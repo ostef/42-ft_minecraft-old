@@ -266,6 +266,32 @@ String fstring (Allocator allocator, const char *fmt_str, ...)
 	return string_builder_build (&builder, allocator);
 }
 
+char *vfcstring (Allocator allocator, const char *fmt_str, va_list va)
+{
+	String_Builder builder;
+	string_builder_init (&builder, allocator);
+
+	string_builder_appendv (&builder, fmt_str, va);
+
+	return string_builder_build_cstr (&builder, allocator);
+}
+
+char *fcstring (Allocator allocator, const char *fmt_str, ...)
+{
+	va_list va;
+
+	va_start (va, fmt_str);
+
+	String_Builder builder;
+	string_builder_init (&builder, allocator);
+
+	string_builder_appendv (&builder, fmt_str, va);
+
+	va_end (va);
+
+	return string_builder_build_cstr (&builder, allocator);
+}
+
 String filename_get_parent_dir (String filename)
 {
 	if (!filename.count)
