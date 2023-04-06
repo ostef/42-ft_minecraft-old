@@ -26,7 +26,7 @@ void *heap_allocator_proc (Allocator_Op op, s64 size, void *old_ptr, void *data)
 	else if (op == Allocator_Op_Free)
 		free (old_ptr);
 	else
-		panic ("Unreachable code.");
+		panic ("Invalid allocator operation");
 
 	return null;
 }
