@@ -36,6 +36,10 @@
 # define STB_SPRINTF_MIN (STRING_BUILDER_PAGE_SIZE / 2)
 #endif
 
+#ifdef PLATFORM_WINDOWS
+#pragma warning (disable: 4312)	// 'type cast': conversion from 'A' to 'B' of greater size
+#endif
+
 #include <stb_sprintf.h>
 
 #define null nullptr
