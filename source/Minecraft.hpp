@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core.hpp"
+#include "Linalg.hpp"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
