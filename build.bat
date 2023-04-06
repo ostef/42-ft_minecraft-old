@@ -38,9 +38,6 @@ if not exist gl.obj (
 	cl %compiler_flags% /Ithird_party\glad\include\ -c "third_party\glad\src\gl.c"
 )
 
-
-:: Let's not compile ImGui all the time, we don't really change the source code so this
-:: does not make much sense, especially since this is the longest part of the build
 if not exist ImGui.obj (
 	cl %compiler_options% -c "source\ImGui.cpp"
 ) else if %always_compile_third_party% == 1 (
@@ -48,7 +45,6 @@ if not exist ImGui.obj (
 )
 
 cl %compiler_options% -c "source\Core.cpp"
-cl %compiler_options% -c "source\Linalg.cpp"
-cl %compiler_options% -c "source\main.cpp"
+cl %compiler_options% -c "source\Minecraft.cpp"
 
-cl %compiler_flags% main.obj Core.obj ImGui.obj gl.obj /link %linker_options% -OUT:%output_name%
+cl %compiler_flags% Minecraft.obj Core.obj ImGui.obj gl.obj /link %linker_options% -OUT:%output_name%
