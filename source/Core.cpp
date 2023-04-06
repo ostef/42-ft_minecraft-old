@@ -9,3 +9,6 @@
 #include "Core/math.cpp"
 #include "Core/string.cpp"
 #include "Core/string_builder.cpp"
+
+#define STB_SPRINTF_IMPLEMENTATION
+#include <stb_sprintf.h>

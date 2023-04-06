@@ -1,8 +1,5 @@
 #include "Minecraft.hpp"
 
-#define STB_SPRINTF_IMPLEMENTATION
-#include <stb_sprintf.h>
-
 Arena     frame_arena;
 Allocator frame_allocator;
 
