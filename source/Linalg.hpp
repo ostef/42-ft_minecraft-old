@@ -304,4 +304,4 @@ typedef Quaternion<f64> Quatd;
 #undef DEFINE_ACCESS_OPERATOR
 #undef CHECK_BOUNDS
 
-#include "Linalg.generated.tpp"
+#include "Linalg/generated.tpp"

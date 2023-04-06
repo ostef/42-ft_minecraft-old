@@ -44,9 +44,9 @@ if not exist ImGui.obj (
 	cl %compiler_options% -c "source\ImGui.cpp"
 )
 
-cl %compiler_options% "source\gen_Linalg.cpp" /link %linker_options% -OUT:gen_Linalg.exe
-echo Generating source/Linalg.generated.tpp
-call gen_Linalg > source\Linalg.generated.tpp
+cl %compiler_options% "source\Linalg\gen_Linalg.cpp" /link %linker_options% -OUT:gen_Linalg.exe
+echo Generating source/Linalg/generated.tpp
+call gen_Linalg > source\Linalg\generated.tpp
 del gen_Linalg.exe
 del gen_Linalg.obj
 del gen_Linalg.pdb
