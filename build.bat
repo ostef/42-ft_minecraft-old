@@ -45,13 +45,32 @@ if not exist ImGui.obj (
 )
 
 cl %compiler_options% "source\Linalg\gen_Linalg.cpp" /link %linker_options% -OUT:gen_Linalg.exe
+
+if %errorlevel% neq 0 goto error
+
 echo Generating source/Linalg/generated.tpp
 call gen_Linalg > source\Linalg\generated.tpp
+
+if %errorlevel% neq 0 goto error
+
 del gen_Linalg.exe
 del gen_Linalg.obj
 del gen_Linalg.pdb
 
 cl %compiler_options% -c "source\Core.cpp"
+
+if %errorlevel% neq 0 goto error
+
 cl %compiler_options% -c "source\Minecraft.cpp"
 
+if %errorlevel% neq 0 goto error
+
 cl %compiler_flags% Minecraft.obj Core.obj ImGui.obj gl.obj /link %linker_options% -OUT:%output_name%
+
+if %errorlevel% neq 0 goto error
+
+goto:eof
+
+:error
+	echo Build failed. Exitting.
+	cmd /c exit /b 1
