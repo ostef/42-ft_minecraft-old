@@ -299,6 +299,8 @@ union Quaternion
 typedef Quaternion<f32> Quatf;
 typedef Quaternion<f64> Quatd;
 
+#include "Linalg/quaternion.tpp"
+
 #undef DEFINE_ACCESS_OPERATOR
 #undef CHECK_BOUNDS
 
