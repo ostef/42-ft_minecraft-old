@@ -46,6 +46,18 @@ int main (int argc, const char **args)
 	io.Fonts->AddFontFromFileTTF ("data/Roboto-Regular.ttf", 18);
 
 	ImGui::StyleColorsDark ();
+	{
+		auto style = &ImGui::GetStyle ();
+		style->WindowRounding = 10;
+		style->WindowTitleAlign = {0.5, 0.5};
+		style->ChildRounding = 3;
+		style->FrameRounding = 6;
+		style->PopupRounding = 3;
+		style->GrabRounding = 4;
+		style->TabRounding = 6;
+		style->FramePadding = {10, 6};
+		style->SeparatorTextBorderSize = 1;
+	}
 
 	ImGui_ImplGlfw_InitForOpenGL (window, true);
 	ImGui_ImplOpenGL3_Init ("#version 130");
