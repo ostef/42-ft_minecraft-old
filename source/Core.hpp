@@ -80,7 +80,7 @@ typedef double f64;
 	print ("\t" __VA_ARGS__);\
 	print ("\n");\
 	debug_break ();\
-} while (0);
+} while (0)
 
 #define assert(expr, ...) do {\
 	if (!(expr)) {\
@@ -88,7 +88,7 @@ typedef double f64;
 		print ("\t" __VA_ARGS__); print ("\n");\
 		debug_break ();\
 	}\
-} while (0);
+} while (0)
 
 #define cast(T) (T)
 
