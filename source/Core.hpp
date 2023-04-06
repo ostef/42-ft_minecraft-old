@@ -153,6 +153,12 @@ T clamp (T x, T a, T b)
 	return x < a ? a : (x > b ? b : x);
 }
 
+template<typename T>
+T lerp (T a, T b, T t)
+{
+	return a + t * (b - a);
+}
+
 inline
 bool approx_zero (f32 x, f32 epsilon = 0.00001f)
 {
