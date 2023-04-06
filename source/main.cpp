@@ -79,6 +79,8 @@ int main (int argc, const char **args)
 		if (show_demo_window)
 			ImGui::ShowDemoWindow (&show_demo_window);
 
+		show_perlin_test_window ();
+
 		ImGui::Render ();
 		int width, height;
 		glfwGetFramebufferSize (window, &width, &height);
