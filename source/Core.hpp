@@ -80,18 +80,18 @@ typedef double f64;
 #endif
 
 #define panic(...) do {\
-	print ("\n\033[" REPORT_FATAL_COLOR "mPanic\033[0m at file " __FILE__ ":%d\n", __LINE__);\
-	print ("\t" __VA_ARGS__);\
-	print ("\n");\
-	debug_break ();\
+    print ("\n\033[" REPORT_FATAL_COLOR "mPanic\033[0m at file " __FILE__ ":%d\n", __LINE__);\
+    print ("\t" __VA_ARGS__);\
+    print ("\n");\
+    debug_break ();\
 } while (0)
 
 #define assert(expr, ...) do {\
-	if (!(expr)) {\
-		print ("\n\033[" REPORT_FATAL_COLOR "mAssertion failed (" #expr ")\033[0m at file " __FILE__ ":%d\n", __LINE__);\
-		print ("\t" __VA_ARGS__); print ("\n");\
-		debug_break ();\
-	}\
+    if (!(expr)) {\
+        print ("\n\033[" REPORT_FATAL_COLOR "mAssertion failed (" #expr ")\033[0m at file " __FILE__ ":%d\n", __LINE__);\
+        print ("\t" __VA_ARGS__); print ("\n");\
+        debug_break ();\
+    }\
 } while (0)
 
 #define cast(T) (T)
@@ -108,16 +108,16 @@ typedef double f64;
 template <typename F>
 struct privDefer
 {
-	F f;
+    F f;
 
-	privDefer (F f) : f (f) {}
-	~privDefer () { f (); }
+    privDefer (F f) : f (f) {}
+    ~privDefer () { f (); }
 };
 
 template <typename F>
 privDefer<F> defer_func (F f)
 {
-	return privDefer<F> (f);
+    return privDefer<F> (f);
 }
 
 #define DEFER_1(x, y) x##y
@@ -132,59 +132,59 @@ int decimal_length (u64 n);
 template<typename T>
 T abs (T x)
 {
-	return x > 0 ? x : -x;
+    return x > 0 ? x : -x;
 }
 
 template<typename T>
 T min (T a, T b)
 {
-	return a < b ? a : b;
+    return a < b ? a : b;
 }
 
 template<typename T>
 T max (T a, T b)
 {
-	return a > b ? a : b;
+    return a > b ? a : b;
 }
 
 template<typename T>
 T clamp (T x, T a, T b)
 {
-	return x < a ? a : (x > b ? b : x);
+    return x < a ? a : (x > b ? b : x);
 }
 
 template<typename T>
 T lerp (T a, T b, T t)
 {
-	return a + t * (b - a);
+    return a + t * (b - a);
 }
 
 inline
 bool approx_zero (f32 x, f32 epsilon = 0.00001f)
 {
-	return abs (x) <= epsilon;
+    return abs (x) <= epsilon;
 }
 
 inline
 bool approx_equals (f32 a, f32 b, f32 epsilon = 0.00001f)
 {
-	return abs (a - b) <= epsilon;
+    return abs (a - b) <= epsilon;
 }
 
 // Memory
 
 enum Allocator_Op
 {
-	Allocator_Op_Allocate = 0,
-	Allocator_Op_Free,
+    Allocator_Op_Allocate = 0,
+    Allocator_Op_Free,
 };
 
 typedef void *(*Allocator_Proc) (Allocator_Op op, s64 size, void *old_ptr, void *data);
 
 struct Allocator
 {
-	void          *data;
-	Allocator_Proc proc;
+    void          *data;
+    Allocator_Proc proc;
 };
 
 void *mem_alloc (s64 size, Allocator allocator);
@@ -197,24 +197,24 @@ Allocator heap_allocator ();
 
 struct Arena_Page
 {
-	struct Arena_Page *prev;
-	s64 used;
-	s64 size;
+    struct Arena_Page *prev;
+    s64 used;
+    s64 size;
 };
 
 struct Arena
 {
-	Arena_Page *page;
-	Allocator page_allocator;
-	s64 total_size;
-	s64 total_used;
-	s64 default_page_size;
+    Arena_Page *page;
+    Allocator page_allocator;
+    s64 total_size;
+    s64 total_used;
+    s64 default_page_size;
 };
 
 struct Arena_State
 {
-	Arena_Page *page;
-	s64 mark;
+    Arena_Page *page;
+    s64 mark;
 };
 
 bool arena_init (Arena *arena, s64 default_page_size, Allocator allocator);
@@ -237,28 +237,28 @@ int fprintln (FILE *file, const char *fmt_str, ...);
 
 struct String
 {
-	s64 count;
-	char *data;
+    s64 count;
+    char *data;
 
-	inline
-	char &operator[] (s64 i)
-	{
-		#ifndef NO_BOUNDS_CHECKING
-			assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
-		#endif
+    inline
+    char &operator[] (s64 i)
+    {
+        #ifndef NO_BOUNDS_CHECKING
+            assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
+        #endif
 
-		return data[i];
-	}
+        return data[i];
+    }
 
-	inline
-	const char &operator[] (s64 i) const
-	{
-		#ifndef NO_BOUNDS_CHECKING
-			assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
-		#endif
+    inline
+    const char &operator[] (s64 i) const
+    {
+        #ifndef NO_BOUNDS_CHECKING
+            assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
+        #endif
 
-		return data[i];
-	}
+        return data[i];
+    }
 };
 
 #define fstr(s) cast (int) (s).count, (s).data
@@ -291,18 +291,18 @@ char *fcstring (Allocator allocator, const char *fmt_str, ...);
 
 struct String_Builder_Page
 {
-	struct String_Builder_Page *prev;
-	struct String_Builder_Page *next;
-	s64 count;
-	u8 buff[STRING_BUILDER_PAGE_SIZE];
+    struct String_Builder_Page *prev;
+    struct String_Builder_Page *next;
+    s64 count;
+    u8 buff[STRING_BUILDER_PAGE_SIZE];
 };
 
 struct String_Builder
 {
-	Allocator allocator;
-	s64 count;
-	String_Builder_Page *curr_page;
-	String_Builder_Page base_page;
+    Allocator allocator;
+    s64 count;
+    String_Builder_Page *curr_page;
+    String_Builder_Page base_page;
 };
 
 #define      BINARY_BASE "01"
@@ -352,141 +352,141 @@ String filename_get_parent_dir (String filename);
 template <typename T>
 struct Slice
 {
-	s64 count;
-	T *data;
+    s64 count;
+    T *data;
 
-	inline
-	T &operator[] (s64 i)
-	{
-		#ifndef NO_BOUNDS_CHECKING
-			assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
-		#endif
+    inline
+    T &operator[] (s64 i)
+    {
+        #ifndef NO_BOUNDS_CHECKING
+            assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
+        #endif
 
-		return data[i];
-	}
+        return data[i];
+    }
 
-	inline
-	const T &operator[] (s64 i) const
-	{
-		#ifndef NO_BOUNDS_CHECKING
-			assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
-		#endif
+    inline
+    const T &operator[] (s64 i) const
+    {
+        #ifndef NO_BOUNDS_CHECKING
+            assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
+        #endif
 
-		return data[i];
-	}
+        return data[i];
+    }
 };
 
 template<typename T>
 Slice<T> slice_make (s64 count, T *data)
 {
-	Slice<T> result;
-	result.count = count;
-	result.data = data;
+    Slice<T> result;
+    result.count = count;
+    result.data = data;
 
-	return result;
+    return result;
 }
 
 template<typename T>
 Slice<T> slice_alloc (s64 count, Allocator allocator)
 {
-	Slice<T> result;
+    Slice<T> result;
 
-	result.data = mem_alloc_uninit (T, count, allocator);
-	if (!result.data)
-	{
-		result.count = 0;
+    result.data = mem_alloc_uninit (T, count, allocator);
+    if (!result.data)
+    {
+        result.count = 0;
 
-		return result;
-	}
+        return result;
+    }
 
-	result.count = count;
+    result.count = count;
 
-	return result;
+    return result;
 }
 
 template <typename T>
 struct Array : public Slice<T>
 {
-	s64 capacity;
-	Allocator allocator;
+    s64 capacity;
+    Allocator allocator;
 };
 
 template<typename T>
 Slice<T> slice_from_array (const Array<T> &arr)
 {
-	Slice<T> result;
-	result.count = arr.count;
-	result.data = arr.data;
+    Slice<T> result;
+    result.count = arr.count;
+    result.data = arr.data;
 
-	return result;
+    return result;
 }
 
 template<typename T>
 void array_init (Array<T> *arr, Allocator allocator, s64 base_capacity = 0)
 {
-	arr->count = 0;
-	arr->data = null;
-	arr->capacity = 0;
-	arr->allocator = allocator;
-	if (base_capacity > 0)
-		array_reserve (arr, base_capacity);
+    arr->count = 0;
+    arr->data = null;
+    arr->capacity = 0;
+    arr->allocator = allocator;
+    if (base_capacity > 0)
+        array_reserve (arr, base_capacity);
 }
 
 template<typename T>
 void array_free (Array<T> *arr)
 {
-	mem_free (arr->data, arr->allocator);
-	arr->data = null;
-	arr->capacity = 0;
-	arr->count = 0;
+    mem_free (arr->data, arr->allocator);
+    arr->data = null;
+    arr->capacity = 0;
+    arr->count = 0;
 }
 
 template<typename T>
 void array_clear (Array<T> *arr)
 {
-	arr->count = 0;
+    arr->count = 0;
 }
 
 template<typename T>
 void array_reserve (Array<T> *arr, s64 capacity)
 {
-	if (capacity < arr->capacity)
-		return;
+    if (capacity < arr->capacity)
+        return;
 
-	T *new_data = mem_alloc_uninit (T, capacity, arr->allocator);
-	assert (new_data != null, "Array reserve failed. Requested %lld elements.", capacity);
-	memcpy (new_data, arr->data, sizeof (T) * arr->count);
+    T *new_data = mem_alloc_uninit (T, capacity, arr->allocator);
+    assert (new_data != null, "Array reserve failed. Requested %lld elements.", capacity);
+    memcpy (new_data, arr->data, sizeof (T) * arr->count);
 
-	mem_free (arr->data, arr->allocator);
+    mem_free (arr->data, arr->allocator);
 
-	arr->data = new_data;
-	arr->capacity = capacity;
+    arr->data = new_data;
+    arr->capacity = capacity;
 }
 
 template<typename T>
 T *array_push (Array<T> *arr)
 {
-	if (arr->count >= arr->capacity)
-		array_reserve (arr, arr->capacity * 2 + 8);
+    if (arr->count >= arr->capacity)
+        array_reserve (arr, arr->capacity * 2 + 8);
 
-	T *result = &arr->data[arr->count];
-	arr->count += 1;
+    T *result = &arr->data[arr->count];
+    arr->count += 1;
 
-	return result;
+    return result;
 }
 
 template<typename T>
 void array_push (Array<T> *arr, const T &elem)
 {
-	T *ptr = array_push (arr);
-	*ptr = elem;
+    T *ptr = array_push (arr);
+    *ptr = elem;
 }
 
 template<typename T>
 void array_pop (Array<T> *arr)
 {
-	assert (arr->count > 0, "Cannot pop element from empty array.");
-	arr->count -= 1;
+    assert (arr->count > 0, "Cannot pop element from empty array.");
+    arr->count -= 1;
 }
 
 // Hash map
@@ -500,259 +500,259 @@ void array_pop (Array<T> *arr)
 template<typename Key, typename Value>
 struct Hash_Map
 {
-	typedef u32 (*hash_func) (const Key &);
-	typedef bool (*compare_func) (const Key &, const Key &);
+    typedef u32 (*hash_func) (const Key &);
+    typedef bool (*compare_func) (const Key &, const Key &);
 
-	struct Entry
-	{
-		u32 hash;
-		Key key;
-		Value value;
-	};
+    struct Entry
+    {
+        u32 hash;
+        Key key;
+        Value value;
+    };
 
-	s64 count;
-	s64 capacity;
-	Allocator allocator;
-	Entry *entries;
-	hash_func hash_function;
-	compare_func compare_function;
+    s64 count;
+    s64 capacity;
+    Allocator allocator;
+    Entry *entries;
+    hash_func hash_function;
+    compare_func compare_function;
 };
 
 #define for_hash_map(it, hash_map) for (auto it = hash_map_first (&(hash_map)); it.key; it = hash_map_next (&(hash_map), it))
 
 template<typename Key, typename Value>
 bool hash_map_init (
-	Hash_Map<Key, Value> *map,
-	typename Hash_Map<Key, Value>::hash_func hash_function,
-	typename Hash_Map<Key, Value>::compare_func compare_function,
-	Allocator allocator,
-	s64 base_capacity = 0
+    Hash_Map<Key, Value> *map,
+    typename Hash_Map<Key, Value>::hash_func hash_function,
+    typename Hash_Map<Key, Value>::compare_func compare_function,
+    Allocator allocator,
+    s64 base_capacity = 0
 )
 {
-	assert (base_capacity >= 0);
-	assert (hash_function != null);
-	assert (compare_function != null);
+    assert (base_capacity >= 0);
+    assert (hash_function != null);
+    assert (compare_function != null);
 
-	memset (map, 0, sizeof (*map));
+    memset (map, 0, sizeof (*map));
 
-	map->allocator = allocator;
-	map->count = 0;
-	map->hash_function = hash_function;
-	map->compare_function = compare_function;
+    map->allocator = allocator;
+    map->count = 0;
+    map->hash_function = hash_function;
+    map->compare_function = compare_function;
 
-	if (base_capacity > 0)
-	{
-		map->capacity = max (base_capacity, HASH_MAP_MIN_CAPACITY);
+    if (base_capacity > 0)
+    {
+        map->capacity = max (base_capacity, HASH_MAP_MIN_CAPACITY);
 
-		s64 p = 1;
-		while (map->capacity > p)
-			p += p;
-		map->capacity = p;
+        s64 p = 1;
+        while (map->capacity > p)
+            p += p;
+        map->capacity = p;
 
-		map->entries = (typename Hash_Map<Key, Value>::Entry *)mem_alloc (
-			sizeof (typename Hash_Map<Key, Value>::Entry) * map->capacity, map->allocator);
-		if (!map->entries)
-			return false;
+        map->entries = (typename Hash_Map<Key, Value>::Entry *)mem_alloc (
+            sizeof (typename Hash_Map<Key, Value>::Entry) * map->capacity, map->allocator);
+        if (!map->entries)
+            return false;
 
-		for_range (i, 0, map->capacity)
-		{
-			map->entries[i].hash = HASH_NEVER_OCCUPIED;
-		}
-	}
+        for_range (i, 0, map->capacity)
+        {
+            map->entries[i].hash = HASH_NEVER_OCCUPIED;
+        }
+    }
 
-	return true;
+    return true;
 }
 
 template<typename Key, typename Value>
 void hash_map_free (Hash_Map<Key, Value> *map)
 {
-	mem_free (&map->entries, map->allocator);
-	map->count = 0;
-	map->capacity = 0;
+    mem_free (&map->entries, map->allocator);
+    map->count = 0;
+    map->capacity = 0;
 }
 
 template<typename Key, typename Value>
 void hash_map_clear (Hash_Map<Key, Value> *map)
 {
-	for_range (i, 0, map->capacity)
-		map->entries[i].hash = HASH_NEVER_OCCUPIED;
+    for_range (i, 0, map->capacity)
+        map->entries[i].hash = HASH_NEVER_OCCUPIED;
 
-	map->count = 0;
+    map->count = 0;
 }
 
 template<typename Key, typename Value>
 bool hash_map_grow (Hash_Map<Key, Value> *map)
 {
-	auto old_capacity = map->capacity;
-	auto old_entries = map->entries;
+    auto old_capacity = map->capacity;
+    auto old_entries = map->entries;
 
-	auto new_capacity = max (map->capacity * 2, HASH_MAP_MIN_CAPACITY);
-	auto new_entries = map->entries = (typename Hash_Map<Key, Value>::Entry *)mem_alloc (
-		sizeof (typename Hash_Map<Key, Value>::Entry) * new_capacity, map->allocator);
-	if (!new_entries)
-		return false;
+    auto new_capacity = max (map->capacity * 2, HASH_MAP_MIN_CAPACITY);
+    auto new_entries = map->entries = (typename Hash_Map<Key, Value>::Entry *)mem_alloc (
+        sizeof (typename Hash_Map<Key, Value>::Entry) * new_capacity, map->allocator);
+    if (!new_entries)
+        return false;
 
-	map->capacity = new_capacity;
-	map->entries = new_entries;
-	map->count = 0;
+    map->capacity = new_capacity;
+    map->entries = new_entries;
+    map->count = 0;
 
-	for_range (i, 0, new_capacity)
-		new_entries[i].hash = HASH_NEVER_OCCUPIED;
+    for_range (i, 0, new_capacity)
+        new_entries[i].hash = HASH_NEVER_OCCUPIED;
 
-	for_range (i, 0, old_capacity)
-	{
-		if (old_entries[i].hash >= HASH_FIRST_OCCUPIED)
-			hash_map_insert (map, old_entries[i].key, old_entries[i].value);
-	}
+    for_range (i, 0, old_capacity)
+    {
+        if (old_entries[i].hash >= HASH_FIRST_OCCUPIED)
+            hash_map_insert (map, old_entries[i].key, old_entries[i].value);
+    }
 
-	mem_free (old_entries, map->allocator);
+    mem_free (old_entries, map->allocator);
 
-	return true;
+    return true;
 }
 
 struct Hash_Map_Probe_Result
 {
-	u32 hash;
-	s64 index;
-	bool is_present;
+    u32 hash;
+    s64 index;
+    bool is_present;
 };
 
 template<typename Key, typename Value>
 Hash_Map_Probe_Result hash_map_probe (Hash_Map<Key, Value> *map, const Key &key)
 {
-	u32 mask = cast (u32) (map->capacity - 1);
-	u32 hash = map->hash_function (key);
-	if (hash < HASH_FIRST_OCCUPIED)
-		hash += HASH_FIRST_OCCUPIED;
+    u32 mask = cast (u32) (map->capacity - 1);
+    u32 hash = map->hash_function (key);
+    if (hash < HASH_FIRST_OCCUPIED)
+        hash += HASH_FIRST_OCCUPIED;
 
-	s64 index = hash & mask;
-	u32 increment = 1 + (hash >> 27);
-	while (map->entries[index].hash != HASH_NEVER_OCCUPIED)
-	{
-		auto entry = &map->entries[index];
-		if (entry->hash == hash && map->compare_function (entry->key, key))
-			return {hash, index, true};
+    s64 index = hash & mask;
+    u32 increment = 1 + (hash >> 27);
+    while (map->entries[index].hash != HASH_NEVER_OCCUPIED)
+    {
+        auto entry = &map->entries[index];
+        if (entry->hash == hash && map->compare_function (entry->key, key))
+            return {hash, index, true};
 
-		index += increment;
-		index &= mask;
-		increment += 1;
-	}
+        index += increment;
+        index &= mask;
+        increment += 1;
+    }
 
-	return {hash, index, false};
+    return {hash, index, false};
 }
 
 template<typename Key, typename Value>
 struct Hash_Map_Insert_Result
 {
-	Value *ptr;
-	bool was_present;
+    Value *ptr;
+    bool was_present;
 };
 
 template<typename Key, typename Value>
 Hash_Map_Insert_Result<Key, Value> hash_map_insert (Hash_Map<Key, Value> *map, const Key &key)
 {
-	if ((map->count + 1) * 100 >= map->capacity * HASH_MAP_LOAD_FACTOR)
-	{
-		if (!hash_map_grow (map))
-			panic ("Could not allocate memory for hash map.");
-	}
+    if ((map->count + 1) * 100 >= map->capacity * HASH_MAP_LOAD_FACTOR)
+    {
+        if (!hash_map_grow (map))
+            panic ("Could not allocate memory for hash map.");
+    }
 
-	auto probe_result = hash_map_probe (map, key);
+    auto probe_result = hash_map_probe (map, key);
 
-	auto entry = &map->entries[probe_result.index];
-	if (probe_result.is_present)
-		return {&entry->value, true};
+    auto entry = &map->entries[probe_result.index];
+    if (probe_result.is_present)
+        return {&entry->value, true};
 
-	memset (&entry->value, 0, sizeof (entry->value));
-	entry->hash = probe_result.hash;
-	entry->key = key;
-	map->count += 1;
+    memset (&entry->value, 0, sizeof (entry->value));
+    entry->hash = probe_result.hash;
+    entry->key = key;
+    map->count += 1;
 
-	return {&entry->value, false};
+    return {&entry->value, false};
 }
 
 template<typename Key, typename Value>
 Hash_Map_Insert_Result<Key, Value> hash_map_insert (Hash_Map<Key, Value> *map, const Key &key, const Value &value)
 {
-	auto result = hash_map_insert (map, key);
-	*(result.ptr) = value;
+    auto result = hash_map_insert (map, key);
+    *(result.ptr) = value;
 
-	return result;
+    return result;
 }
 
 template<typename Key, typename Value>
 bool hash_map_remove (Hash_Map<Key, Value> *map, const Key &key)
 {
-	auto probe_result = hash_map_probe (map, key);
-	if (!probe_result.is_present)
-		return false;
+    auto probe_result = hash_map_probe (map, key);
+    if (!probe_result.is_present)
+        return false;
 
-	auto entry = &map->entries[probe_result.index];
-	entry->hash = HASH_REMOVED;
-	map->count -= 1;
+    auto entry = &map->entries[probe_result.index];
+    entry->hash = HASH_REMOVED;
+    map->count -= 1;
 
-	return true;
+    return true;
 }
 
 template<typename Key, typename Value>
 Value *hash_map_get (Hash_Map<Key, Value> *map, const Key &key)
 {
-	if (map->count == 0)
-		return null;
+    if (map->count == 0)
+        return null;
 
-	auto probe_result = hash_map_probe (map, key);
-	if (probe_result.is_present)
-		return &map->entries[probe_result.index].value;
+    auto probe_result = hash_map_probe (map, key);
+    if (probe_result.is_present)
+        return &map->entries[probe_result.index].value;
 
-	return null;
+    return null;
 }
 
 template<typename Key, typename Value>
 bool hash_map_set (Hash_Map<Key, Value> *map, const Key &key, const Value &value)
 {
-	Value *ptr = hash_map_get (map, key);
-	if (ptr)
-	{
-		*ptr = value;
+    Value *ptr = hash_map_get (map, key);
+    if (ptr)
+    {
+        *ptr = value;
 
-		return true;
-	}
+        return true;
+    }
 
-	return false;
+    return false;
 }
 
 template<typename Key, typename Value>
 struct Hash_Map_Iter
 {
-	s64 index;
-	const Key *key;
-	Value *value;
+    s64 index;
+    const Key *key;
+    Value *value;
 };
 
 template<typename Key, typename Value>
 Hash_Map_Iter<Key, Value> hash_map_first (Hash_Map<Key, Value> *map)
 {
-	s64 index = 0;
-	while (index < map->capacity && map->entries[index].hash < HASH_FIRST_OCCUPIED)
-		index += 1;
+    s64 index = 0;
+    while (index < map->capacity && map->entries[index].hash < HASH_FIRST_OCCUPIED)
+        index += 1;
 
-	if (index >= map->capacity)
-		return {0, null, null};
+    if (index >= map->capacity)
+        return {0, null, null};
 
-	return {index, &map->entries[index].key, &map->entries[index].value};
+    return {index, &map->entries[index].key, &map->entries[index].value};
 }
 
 template<typename Key, typename Value>
 Hash_Map_Iter<Key, Value> hash_map_next (Hash_Map<Key, Value> *map, const Hash_Map_Iter<Key, Value> &it)
 {
-	s64 index = it.index + 1;
-	while (index < map->capacity && map->entries[index].hash < HASH_FIRST_OCCUPIED)
-		index += 1;
+    s64 index = it.index + 1;
+    while (index < map->capacity && map->entries[index].hash < HASH_FIRST_OCCUPIED)
+        index += 1;
 
-	if (index >= map->capacity)
-		return {-1, null, null};
+    if (index >= map->capacity)
+        return {-1, null, null};
 
-	return {index, &map->entries[index].key, &map->entries[index].value};
+    return {index, &map->entries[index].key, &map->entries[index].value};
 }
 
 // Hash
