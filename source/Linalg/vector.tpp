@@ -130,8 +130,18 @@ Vector<T, N> ceil (const Vector<T, N> &v)
     return res;
 }
 
-template<typename T, int N, typename E>
-bool approx_zero (const Vector<T, N> &v, E epsilon = 0.00001)
+template<typename T, int N>
+Vector<T, N> lerp (const Vector<T, N> &a, const Vector<T, N> &b, f32 t)
+{
+    Vector<T, N> res;
+    for_range (i, 0, N)
+        res.comps[i] = lerp (a.comps[i], b.comps[i], t);
+
+    return res;
+}
+
+template<typename T, int N>
+bool approx_zero (const Vector<T, N> &v, T epsilon = 0.00001)
 {
     for_range (i, 0, N)
     {
@@ -142,8 +152,8 @@ bool approx_zero (const Vector<T, N> &v, E epsilon = 0.00001)
     return true;
 }
 
-template<typename T, int N, typename E>
-bool approx_equals (const Vector<T, N> &a, const Vector<T, N> &b, E epsilon = 0.00001)
+template<typename T, int N>
+bool approx_equals (const Vector<T, N> &a, const Vector<T, N> &b, T epsilon = 0.00001)
 {
     for_range (i, 0, N)
     {
