@@ -6,6 +6,7 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include <math.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 # define PLATFORM_WINDOWS
@@ -127,7 +128,23 @@ privDefer<F> defer_func (F f)
 
 // Math
 
-int decimal_length (u64 n);
+#define PI 3.14159265358979323846
+
+inline
+int decimal_length (u64 n)
+{
+    if (n == 0)
+        return 1;
+
+    int i = 0;
+    while (n)
+    {
+        n /= 10;
+        i += 1;
+    }
+
+    return i;
+}
 
 template<typename T>
 T abs (T x)
@@ -169,6 +186,12 @@ inline
 bool approx_equals (f32 a, f32 b, f32 epsilon = 0.00001f)
 {
     return abs (a - b) <= epsilon;
+}
+
+template<typename T>
+T to_rads (T angle)
+{
+    return angle * PI / 180.0;
 }
 
 // Memory
@@ -757,7 +780,22 @@ Hash_Map_Iter<Key, Value> hash_map_next (Hash_Map<Key, Value> *map, const Hash_M
 
 // Hash
 
-u32 hash_string (const String &str);
+inline
+u32 hash_string (const String &str)
+{
+    static const u32 OFFSET_BASIS = 0x811c9dc5;
+    static const u32 PRIME        = 0x01000193;
+
+    u32 hash = OFFSET_BASIS;
+    for_array (i, str)
+    {
+        hash ^= str.data[i];
+        hash *= PRIME;
+    }
+
+    return hash;
+}
+
 
 // Platform layer
 

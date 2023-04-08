@@ -6,7 +6,6 @@
 #endif
 
 #include "Core/memory.cpp"
-#include "Core/math.cpp"
 #include "Core/string.cpp"
 #include "Core/string_builder.cpp"
 
