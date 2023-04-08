@@ -96,6 +96,8 @@ void update_flying_camera (Camera *camera)
     if (glfwGetWindowAttrib (g_window, GLFW_FOCUSED))
     {
         move_speed = 0.1;
+        if (glfwGetKey (g_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            move_speed *= 10;
         mouse_delta = g_mouse_delta;
         move_input.x = cast (f32) (glfwGetKey (g_window, GLFW_KEY_D) == GLFW_PRESS)
             - cast (f32) (glfwGetKey (g_window, GLFW_KEY_A) == GLFW_PRESS);
@@ -129,6 +131,9 @@ void update_flying_camera (Camera *camera)
 
 void draw_chunk (Chunk *chunk, Camera *camera)
 {
+    if (chunk->vertices.count == 0)
+        return;
+
     glUseProgram (g_block_shader);
     auto loc = glGetUniformLocation (g_block_shader, "u_View_Projection_Matrix");
     glUniformMatrix4fv (loc, 1, GL_TRUE, camera->view_projection_matrix.comps);
