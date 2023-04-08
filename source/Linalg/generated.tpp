@@ -92,14 +92,14 @@ Vector<T, 2> lerp (const Vector<T, 2> &a, const Vector<T, 2> &b, f32 t)
     return {lerp (a.comps[0], b.comps[0], t), lerp (a.comps[1], b.comps[1], t)};
 }
 
-template<typename T, typename E>
-bool approx_zero (const Vector<T, 2> &v, E epsilon = 0.00001)
+template<typename T>
+bool approx_zero (const Vector<T, 2> &v, T epsilon = 0.00001)
 {
     return approx_zero (v.comps[0], epsilon) && approx_zero (v.comps[1], epsilon);
 }
 
-template<typename T, typename E>
-bool approx_equals (const Vector<T, 2> &a, const Vector<T, 2> &b, E epsilon = 0.00001)
+template<typename T>
+bool approx_equals (const Vector<T, 2> &a, const Vector<T, 2> &b, T epsilon = 0.00001)
 {
     return approx_equals (a.comps[0], b.comps[0], epsilon) && approx_equals (a.comps[1], b.comps[1], epsilon);
 }
@@ -202,14 +202,14 @@ Vector<T, 3> lerp (const Vector<T, 3> &a, const Vector<T, 3> &b, f32 t)
     return {lerp (a.comps[0], b.comps[0], t), lerp (a.comps[1], b.comps[1], t), lerp (a.comps[2], b.comps[2], t)};
 }
 
-template<typename T, typename E>
-bool approx_zero (const Vector<T, 3> &v, E epsilon = 0.00001)
+template<typename T>
+bool approx_zero (const Vector<T, 3> &v, T epsilon = 0.00001)
 {
     return approx_zero (v.comps[0], epsilon) && approx_zero (v.comps[1], epsilon) && approx_zero (v.comps[2], epsilon);
 }
 
-template<typename T, typename E>
-bool approx_equals (const Vector<T, 3> &a, const Vector<T, 3> &b, E epsilon = 0.00001)
+template<typename T>
+bool approx_equals (const Vector<T, 3> &a, const Vector<T, 3> &b, T epsilon = 0.00001)
 {
     return approx_equals (a.comps[0], b.comps[0], epsilon) && approx_equals (a.comps[1], b.comps[1], epsilon) && approx_equals (a.comps[2], b.comps[2], epsilon);
 }
@@ -312,14 +312,14 @@ Vector<T, 4> lerp (const Vector<T, 4> &a, const Vector<T, 4> &b, f32 t)
     return {lerp (a.comps[0], b.comps[0], t), lerp (a.comps[1], b.comps[1], t), lerp (a.comps[2], b.comps[2], t), lerp (a.comps[3], b.comps[3], t)};
 }
 
-template<typename T, typename E>
-bool approx_zero (const Vector<T, 4> &v, E epsilon = 0.00001)
+template<typename T>
+bool approx_zero (const Vector<T, 4> &v, T epsilon = 0.00001)
 {
     return approx_zero (v.comps[0], epsilon) && approx_zero (v.comps[1], epsilon) && approx_zero (v.comps[2], epsilon) && approx_zero (v.comps[3], epsilon);
 }
 
-template<typename T, typename E>
-bool approx_equals (const Vector<T, 4> &a, const Vector<T, 4> &b, E epsilon = 0.00001)
+template<typename T>
+bool approx_equals (const Vector<T, 4> &a, const Vector<T, 4> &b, T epsilon = 0.00001)
 {
     return approx_equals (a.comps[0], b.comps[0], epsilon) && approx_equals (a.comps[1], b.comps[1], epsilon) && approx_equals (a.comps[2], b.comps[2], epsilon) && approx_equals (a.comps[3], b.comps[3], epsilon);
 }
@@ -369,8 +369,8 @@ Vector<T, 3> mul (const Vector<T, 3> &a, const Matrix<T, 3, 3> &b)
 template<typename T>
 Matrix<T, 3, 3> mul (const Matrix<T, 3, 3> &a, const Matrix<T, 3, 3> &b)
 {
-    return {a.comps[0 * 3 + 0] * b.comps[0 * 3 + 0] + a.comps[0 * 3 + 1] * b.comps[1 * 3 + 0] + a.comps[0 * 3 + 2] * b.comps[2 * 3 + 0], a.comps[0 * 3 + 0] * b.comps[0 * 3 + 1] + a.comps[0 * 3 + 1] * b.comps[1 * 3 + 1] + a.comps[0 * 3 + 2] * b.comps[2 * 3 + 1], a.comps[0 * 3 + 0] * b.comps[0 * 3 + 2] + a.comps[0 * 3 + 1] * b.comps[1 * 3 + 2] + a.comps[0 * 3 + 2] * b.comps[2 * 3 + 2],
-        a.comps[1 * 3 + 0] * b.comps[0 * 3 + 0] + a.comps[1 * 3 + 1] * b.comps[1 * 3 + 0] + a.comps[1 * 3 + 2] * b.comps[2 * 3 + 0], a.comps[1 * 3 + 0] * b.comps[0 * 3 + 1] + a.comps[1 * 3 + 1] * b.comps[1 * 3 + 1] + a.comps[1 * 3 + 2] * b.comps[2 * 3 + 1], a.comps[1 * 3 + 0] * b.comps[0 * 3 + 2] + a.comps[1 * 3 + 1] * b.comps[1 * 3 + 2] + a.comps[1 * 3 + 2] * b.comps[2 * 3 + 2],
+    return {a.comps[0 * 3 + 0] * b.comps[0 * 3 + 0] + a.comps[0 * 3 + 1] * b.comps[1 * 3 + 0] + a.comps[0 * 3 + 2] * b.comps[2 * 3 + 0], a.comps[0 * 3 + 0] * b.comps[0 * 3 + 1] + a.comps[0 * 3 + 1] * b.comps[1 * 3 + 1] + a.comps[0 * 3 + 2] * b.comps[2 * 3 + 1], a.comps[0 * 3 + 0] * b.comps[0 * 3 + 2] + a.comps[0 * 3 + 1] * b.comps[1 * 3 + 2] + a.comps[0 * 3 + 2] * b.comps[2 * 3 + 2], 
+        a.comps[1 * 3 + 0] * b.comps[0 * 3 + 0] + a.comps[1 * 3 + 1] * b.comps[1 * 3 + 0] + a.comps[1 * 3 + 2] * b.comps[2 * 3 + 0], a.comps[1 * 3 + 0] * b.comps[0 * 3 + 1] + a.comps[1 * 3 + 1] * b.comps[1 * 3 + 1] + a.comps[1 * 3 + 2] * b.comps[2 * 3 + 1], a.comps[1 * 3 + 0] * b.comps[0 * 3 + 2] + a.comps[1 * 3 + 1] * b.comps[1 * 3 + 2] + a.comps[1 * 3 + 2] * b.comps[2 * 3 + 2], 
         a.comps[2 * 3 + 0] * b.comps[0 * 3 + 0] + a.comps[2 * 3 + 1] * b.comps[1 * 3 + 0] + a.comps[2 * 3 + 2] * b.comps[2 * 3 + 0], a.comps[2 * 3 + 0] * b.comps[0 * 3 + 1] + a.comps[2 * 3 + 1] * b.comps[1 * 3 + 1] + a.comps[2 * 3 + 2] * b.comps[2 * 3 + 1], a.comps[2 * 3 + 0] * b.comps[0 * 3 + 2] + a.comps[2 * 3 + 1] * b.comps[1 * 3 + 2] + a.comps[2 * 3 + 2] * b.comps[2 * 3 + 2]};
 }
 
@@ -426,16 +426,16 @@ Vector<T, 4> mul (const Vector<T, 3> &a, const Matrix<T, 3, 4> &b)
 template<typename T>
 Matrix<T, 3, 3> mul (const Matrix<T, 3, 4> &a, const Matrix<T, 4, 3> &b)
 {
-    return {a.comps[0 * 4 + 0] * b.comps[0 * 3 + 0] + a.comps[0 * 4 + 1] * b.comps[1 * 3 + 0] + a.comps[0 * 4 + 2] * b.comps[2 * 3 + 0] + a.comps[0 * 4 + 3] * b.comps[3 * 3 + 0], a.comps[0 * 4 + 0] * b.comps[0 * 3 + 1] + a.comps[0 * 4 + 1] * b.comps[1 * 3 + 1] + a.comps[0 * 4 + 2] * b.comps[2 * 3 + 1] + a.comps[0 * 4 + 3] * b.comps[3 * 3 + 1], a.comps[0 * 4 + 0] * b.comps[0 * 3 + 2] + a.comps[0 * 4 + 1] * b.comps[1 * 3 + 2] + a.comps[0 * 4 + 2] * b.comps[2 * 3 + 2] + a.comps[0 * 4 + 3] * b.comps[3 * 3 + 2],
-        a.comps[1 * 4 + 0] * b.comps[0 * 3 + 0] + a.comps[1 * 4 + 1] * b.comps[1 * 3 + 0] + a.comps[1 * 4 + 2] * b.comps[2 * 3 + 0] + a.comps[1 * 4 + 3] * b.comps[3 * 3 + 0], a.comps[1 * 4 + 0] * b.comps[0 * 3 + 1] + a.comps[1 * 4 + 1] * b.comps[1 * 3 + 1] + a.comps[1 * 4 + 2] * b.comps[2 * 3 + 1] + a.comps[1 * 4 + 3] * b.comps[3 * 3 + 1], a.comps[1 * 4 + 0] * b.comps[0 * 3 + 2] + a.comps[1 * 4 + 1] * b.comps[1 * 3 + 2] + a.comps[1 * 4 + 2] * b.comps[2 * 3 + 2] + a.comps[1 * 4 + 3] * b.comps[3 * 3 + 2],
+    return {a.comps[0 * 4 + 0] * b.comps[0 * 3 + 0] + a.comps[0 * 4 + 1] * b.comps[1 * 3 + 0] + a.comps[0 * 4 + 2] * b.comps[2 * 3 + 0] + a.comps[0 * 4 + 3] * b.comps[3 * 3 + 0], a.comps[0 * 4 + 0] * b.comps[0 * 3 + 1] + a.comps[0 * 4 + 1] * b.comps[1 * 3 + 1] + a.comps[0 * 4 + 2] * b.comps[2 * 3 + 1] + a.comps[0 * 4 + 3] * b.comps[3 * 3 + 1], a.comps[0 * 4 + 0] * b.comps[0 * 3 + 2] + a.comps[0 * 4 + 1] * b.comps[1 * 3 + 2] + a.comps[0 * 4 + 2] * b.comps[2 * 3 + 2] + a.comps[0 * 4 + 3] * b.comps[3 * 3 + 2], 
+        a.comps[1 * 4 + 0] * b.comps[0 * 3 + 0] + a.comps[1 * 4 + 1] * b.comps[1 * 3 + 0] + a.comps[1 * 4 + 2] * b.comps[2 * 3 + 0] + a.comps[1 * 4 + 3] * b.comps[3 * 3 + 0], a.comps[1 * 4 + 0] * b.comps[0 * 3 + 1] + a.comps[1 * 4 + 1] * b.comps[1 * 3 + 1] + a.comps[1 * 4 + 2] * b.comps[2 * 3 + 1] + a.comps[1 * 4 + 3] * b.comps[3 * 3 + 1], a.comps[1 * 4 + 0] * b.comps[0 * 3 + 2] + a.comps[1 * 4 + 1] * b.comps[1 * 3 + 2] + a.comps[1 * 4 + 2] * b.comps[2 * 3 + 2] + a.comps[1 * 4 + 3] * b.comps[3 * 3 + 2], 
         a.comps[2 * 4 + 0] * b.comps[0 * 3 + 0] + a.comps[2 * 4 + 1] * b.comps[1 * 3 + 0] + a.comps[2 * 4 + 2] * b.comps[2 * 3 + 0] + a.comps[2 * 4 + 3] * b.comps[3 * 3 + 0], a.comps[2 * 4 + 0] * b.comps[0 * 3 + 1] + a.comps[2 * 4 + 1] * b.comps[1 * 3 + 1] + a.comps[2 * 4 + 2] * b.comps[2 * 3 + 1] + a.comps[2 * 4 + 3] * b.comps[3 * 3 + 1], a.comps[2 * 4 + 0] * b.comps[0 * 3 + 2] + a.comps[2 * 4 + 1] * b.comps[1 * 3 + 2] + a.comps[2 * 4 + 2] * b.comps[2 * 3 + 2] + a.comps[2 * 4 + 3] * b.comps[3 * 3 + 2]};
 }
 
 template<typename T>
 Matrix<T, 3, 4> mul (const Matrix<T, 3, 4> &a, const Matrix<T, 4, 4> &b)
 {
-    return {a.comps[0 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 3],
-        a.comps[1 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 3],
+    return {a.comps[0 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 3], 
+        a.comps[1 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 3], 
         a.comps[2 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 3]};
 }
 
@@ -486,9 +486,9 @@ Vector<T, 4> mul (const Vector<T, 4> &a, const Matrix<T, 4, 4> &b)
 template<typename T>
 Matrix<T, 4, 4> mul (const Matrix<T, 4, 4> &a, const Matrix<T, 4, 4> &b)
 {
-    return {a.comps[0 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 3],
-        a.comps[1 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 3],
-        a.comps[2 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 3],
+    return {a.comps[0 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[0 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[0 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[0 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[0 * 4 + 3] * b.comps[3 * 4 + 3], 
+        a.comps[1 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[1 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[1 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[1 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[1 * 4 + 3] * b.comps[3 * 4 + 3], 
+        a.comps[2 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[2 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[2 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[2 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[2 * 4 + 3] * b.comps[3 * 4 + 3], 
         a.comps[3 * 4 + 0] * b.comps[0 * 4 + 0] + a.comps[3 * 4 + 1] * b.comps[1 * 4 + 0] + a.comps[3 * 4 + 2] * b.comps[2 * 4 + 0] + a.comps[3 * 4 + 3] * b.comps[3 * 4 + 0], a.comps[3 * 4 + 0] * b.comps[0 * 4 + 1] + a.comps[3 * 4 + 1] * b.comps[1 * 4 + 1] + a.comps[3 * 4 + 2] * b.comps[2 * 4 + 1] + a.comps[3 * 4 + 3] * b.comps[3 * 4 + 1], a.comps[3 * 4 + 0] * b.comps[0 * 4 + 2] + a.comps[3 * 4 + 1] * b.comps[1 * 4 + 2] + a.comps[3 * 4 + 2] * b.comps[2 * 4 + 2] + a.comps[3 * 4 + 3] * b.comps[3 * 4 + 2], a.comps[3 * 4 + 0] * b.comps[0 * 4 + 3] + a.comps[3 * 4 + 1] * b.comps[1 * 4 + 3] + a.comps[3 * 4 + 2] * b.comps[2 * 4 + 3] + a.comps[3 * 4 + 3] * b.comps[3 * 4 + 3]};
 }
 

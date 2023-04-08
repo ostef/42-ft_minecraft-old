@@ -171,9 +171,8 @@ void generate_vector_lerp (String_Builder *b, int N)
 
 void generate_vector_approx_zero (String_Builder *b, int N)
 {
-    ln (b, "template<typename T, typename E>");
-    ln (b, "bool approx_zero (const Vector<T, %d> &v, E epsilon = 0.00001)\n{", N, N, N, N);
-    ap (b, "\treturn ");
+    ln (b, "template<typename T>");
+    ln (b, "bool approx_zero (const Vector<T, %d> &v, T epsilon = 0.00001)\n{", N, N, N, N);
     ap (b, "    return ");
     unroll (b, N, " && ", "approx_zero (v.comps[%d], epsilon)");
     ln (b, ";");
@@ -182,9 +181,8 @@ void generate_vector_approx_zero (String_Builder *b, int N)
 
 void generate_vector_approx_equals (String_Builder *b, int N)
 {
-    ln (b, "template<typename T, typename E>");
-    ln (b, "bool approx_equals (const Vector<T, %d> &a, const Vector<T, %d> &b, E epsilon = 0.00001)\n{", N, N, N, N);
-    ap (b, "\treturn ");
+    ln (b, "template<typename T>");
+    ln (b, "bool approx_equals (const Vector<T, %d> &a, const Vector<T, %d> &b, T epsilon = 0.00001)\n{", N, N, N, N);
     ap (b, "    return ");
     unroll (b, N, " && ", "approx_equals (a.comps[%d], b.comps[%d], epsilon)");
     ln (b, ";");
