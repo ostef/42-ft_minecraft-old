@@ -92,6 +92,12 @@ Quaternion<T> operator* (const Quaternion<T> &a, T b)
 }
 
 template<typename T>
+Quaternion<T> operator* (const Quaternion<T> &a, const Quaternion<T> &b)
+{
+    return mul (a, b);
+}
+
+template<typename T>
 Quaternion<T> operator/ (const Quaternion<T> &a, T b)
 {
     return div (a, b);
