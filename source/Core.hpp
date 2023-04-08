@@ -499,10 +499,12 @@ T *array_push (Array<T> *arr)
 }
 
 template<typename T>
-void array_push (Array<T> *arr, const T &elem)
+T *array_push (Array<T> *arr, const T &elem)
 {
     T *ptr = array_push (arr);
     *ptr = elem;
+
+    return ptr;
 }
 
 template<typename T>
