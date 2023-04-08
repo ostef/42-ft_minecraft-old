@@ -69,6 +69,11 @@ union Vector<T, 3>
         T r, g, b;
     };
 
+    struct
+    {
+        T yaw, pitch, roll;
+    };
+
     Vector<T, 2> xy;
 
     T comps[3] = {};
@@ -115,8 +120,6 @@ typedef Vector<s32, 4> Vec4i;
 typedef Vector<s64, 4> Vec4l;
 typedef Vector<f32, 4> Vec4f;
 typedef Vector<f64, 4> Vec4d;
-
-#include "Linalg/vector.tpp"
 
 // Matrix
 
@@ -246,8 +249,6 @@ typedef Matrix<f64, 3, 4> Mat3x4d;
 typedef Matrix<f32, 4, 4> Mat4f;
 typedef Matrix<f64, 4, 4> Mat4d;
 
-#include "Linalg/matrix.tpp"
-
 // Quaternion
 
 template<typename T>
@@ -299,9 +300,11 @@ union Quaternion
 typedef Quaternion<f32> Quatf;
 typedef Quaternion<f64> Quatd;
 
-#include "Linalg/quaternion.tpp"
 
 #undef DEFINE_ACCESS_OPERATOR
 #undef CHECK_BOUNDS
 
+#include "Linalg/vector.tpp"
+#include "Linalg/matrix.tpp"
+#include "Linalg/quaternion.tpp"
 #include "Linalg/generated.tpp"
