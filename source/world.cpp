@@ -26,6 +26,7 @@ void chunk_init (Chunk *chunk, s64 x, s64 y, s64 z)
     glEnableVertexAttribArray (2);
     glVertexAttribPointer (2, 2, GL_FLOAT, GL_FALSE, sizeof (Vertex), cast (void *) offsetof (Vertex, tex_coords));
 
+    glBindVertexArray (0);
     glBindBuffer (GL_ARRAY_BUFFER, 0);
 }
 
