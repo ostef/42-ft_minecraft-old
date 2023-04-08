@@ -153,7 +153,7 @@ Quaternion<T> conjugate (const Quaternion<T> &q)
 template<typename T>
 T angle (const Quaternion<T> &q)
 {
-    return acos (q.w) * 2;
+    return cast (T) acos (q.w) * 2;
 }
 
 template<typename T>
@@ -179,4 +179,22 @@ template<typename T>
 Vector<T, 3> rotate (const Vector<T, 3> &v, const Quaternion<T> &q)
 {
     return (q * {vec.x, vec.y, vec.z, 0} * inverse (q)).vec;
+}
+
+template<typename T>
+Quaternion<T> quat_from_axis_angle (const Vector<T, 3> &axis, T angle)
+{
+    auto a = normalized (axis);
+    auto c = cast (T) cos (angle * 0.5);
+    auto s = cast (T) sin (angle * 0.5);
+
+    return {a.x * s, a.y * s, a.z * s, c};
+}
+
+template<typename T>
+Quaternion<T> quat_from_euler_angles (const Vector<T, 3> &euler)
+{
+    return quat_from_axis_angle ({0, 1, 0}, euler.yaw)
+        * quat_from_axis_angle ({1, 0, 0}, euler.pitch)
+        * quat_from_axis_angle ({0, 0, 1}, euler.roll);
 }
