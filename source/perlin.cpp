@@ -3,11 +3,7 @@
 inline
 f64 perlin_fade (f64 t)
 {
-    f64 t3 = t * t * t;
-    f64 t4 = t3 * t;
-    f64 t5 = t4 * t;
-
-    return 6 * t5 - 15 * t4 + 10 * t3;
+    return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
 inline
@@ -69,12 +65,12 @@ f64 perlin_noise (f64 x, f64 y, f64 z)
         138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180
     };
 
-    int xi = (cast (int) x) & 255;
-    int yi = (cast (int) y) & 255;
-    int zi = (cast (int) z) & 255;
-    f64 xf = x - cast (int) x;
-    f64 yf = y - cast (int) y;
-    f64 zf = z - cast (int) z;
+    int xi = (cast (int) floor (x)) & 255;
+    int yi = (cast (int) floor (y)) & 255;
+    int zi = (cast (int) floor (z)) & 255;
+    f64 xf = x - floor (x);
+    f64 yf = y - floor (y);
+    f64 zf = z - floor (z);
 
     auto u = perlin_fade (xf);
     auto v = perlin_fade (yf);
@@ -83,25 +79,27 @@ f64 perlin_noise (f64 x, f64 y, f64 z)
     int aaa = P[P[P[xi    ] + yi    ] + zi    ];
     int aba = P[P[P[xi    ] + yi + 1] + zi    ];
     int aab = P[P[P[xi    ] + yi    ] + zi + 1];
-    int abb = P[P[P[xi    ] + yi + 1] + zi    ];
+    int abb = P[P[P[xi    ] + yi + 1] + zi + 1];
     int baa = P[P[P[xi + 1] + yi    ] + zi    ];
     int bba = P[P[P[xi + 1] + yi + 1] + zi    ];
     int bab = P[P[P[xi + 1] + yi    ] + zi + 1];
     int bbb = P[P[P[xi + 1] + yi + 1] + zi + 1];
 
-    f64 x1 = lerp (
+    f64 x1, x2, y1, y2;
+
+    x1 = lerp (
         perlin_gradient (aaa, xf    , yf, zf),
         perlin_gradient (baa, xf - 1, yf, zf),
         u
     );
 
-    f64 x2 = lerp (
+    x2 = lerp (
         perlin_gradient (aba, xf    , yf - 1, zf),
         perlin_gradient (bba, xf - 1, yf - 1, zf),
         u
     );
 
-    f64 y1 = lerp (x1, x2, v);
+    y1 = lerp (x1, x2, v);
 
     x1 = lerp (
         perlin_gradient (aab, xf    , yf, zf - 1),
@@ -115,9 +113,9 @@ f64 perlin_noise (f64 x, f64 y, f64 z)
         u
     );
 
-    f64 y2 = lerp (x1, x2, v);
+    y2 = lerp (x1, x2, v);
 
-    return (lerp (y1, y2, w) + 1) * 0.5;
+    return lerp (y1, y2, w);
 }
 
 void show_perlin_test_window (bool *opened)
@@ -127,7 +125,8 @@ void show_perlin_test_window (bool *opened)
     static u32 *texture_buffer;
     static int texture_size;
     static int ui_texture_size = 256;
-    static Vec2i offset;
+    static Vec2i offset = {-2, -2};
+    static f32 z;
 
     if (opened && !*opened)
         return;
@@ -135,7 +134,7 @@ void show_perlin_test_window (bool *opened)
     if (ImGui::Begin ("Perlin Test", opened))
     {
         {
-            auto child_height = ImGui::GetContentRegionAvail ().y - 3 * ImGui::GetFrameHeightWithSpacing ();
+            auto child_height = ImGui::GetContentRegionAvail ().y - 4 * ImGui::GetFrameHeightWithSpacing ();
             if (ImGui::BeginChild ("Image", {0, child_height}, true, ImGuiWindowFlags_HorizontalScrollbar))
             {
                 if (texture_handle)
@@ -148,6 +147,9 @@ void show_perlin_test_window (bool *opened)
         ImGui::SliderFloat ("Scale", &scale, 0.001, 1);
 
         bool should_generate = false;
+
+        if (ImGui::SliderFloat ("Z", &z, -100, 100))
+            should_generate = true;
 
         if (ImGui::Button ("Generate"))
         {
@@ -186,7 +188,8 @@ void show_perlin_test_window (bool *opened)
             {
                 for_range (j, 0, texture_size)
                 {
-                    auto value = perlin_noise (cast (f64) (i + offset.x) * scale, cast (f64) (j + offset.y) * scale, 0);
+                    auto value = perlin_noise (cast (f64) (i + offset.x) * scale, cast (f64) (j + offset.y) * scale, z);
+                    value = (value + 1) * 0.5;
                     u8 color_comp = cast (u8) (value * 255);
                     texture_buffer[i * texture_size + j] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
                 }
