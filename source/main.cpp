@@ -9,6 +9,8 @@ Vec2f g_mouse_delta;
 
 GLFWwindow *g_window;
 
+World g_world;
+
 void glfw_error_callback (int error, const char *description)
 {
     println ("GLFW Error (%d): %s", error, description);
@@ -69,6 +71,7 @@ int main (int argc, const char **args)
         style->FramePadding = {10, 6};
         style->SeparatorTextBorderSize = 1;
         style->FrameBorderSize = 1;
+        style->ItemInnerSpacing.x = 8;
         style->Colors[ImGuiCol_Border].w = 0.25;
     }
 
@@ -91,25 +94,8 @@ int main (int argc, const char **args)
     Vec3f camera_position {};
     Vec3f camera_direction {};
 
-    static Chunk chunk;
-    chunk_init (&chunk, 0, 0, 0);
-
-    for_range (x, 0, Chunk_Size)
-    {
-        for_range (y, 0, Chunk_Size)
-        {
-            for_range (z, 0, Chunk_Size)
-            {
-                s64 i = x * Chunk_Size * Chunk_Size + y * Chunk_Size + z;
-                if (perlin_noise (cast (f64) x * 0.1, cast (f64) y * 0.1, cast (f64) z * 0.1) < 0.5)
-                    chunk.blocks[i].type = cast (Block_Type) Block_Type_Air;
-                else
-                    chunk.blocks[i].type = cast (Block_Type) Block_Type_Stone;
-            }
-        }
-    }
-
     Camera camera = {};
+    camera.position.y = 40;
     camera.fov = 60;
     camera.rotation = {};
     camera.transform = {};
@@ -122,6 +108,12 @@ int main (int argc, const char **args)
         glfwGetCursorPos (g_window, &mx, &my);
         g_curr_mouse_pos = {cast (f32) mx, cast (f32) my};
     }
+
+    world_init (&g_world);
+
+    bool generate_new_chunks = true;
+
+    int render_distance = 5;
 
     bool show_demo_window = false;
     bool show_perlin_test = false;
@@ -140,6 +132,33 @@ int main (int argc, const char **args)
 
         update_flying_camera (&camera);
 
+        if (generate_new_chunks)
+        {
+            for_range (x, -render_distance, render_distance)
+            {
+                for_range (y, -render_distance, render_distance)
+                {
+                    for_range (z, -render_distance, render_distance)
+                    {
+                        Vec3f world_chunk_pos = {cast (f32) x * Chunk_Size, cast (f32) y * Chunk_Size, cast (f32) z * Chunk_Size};
+                        world_chunk_pos += camera.position;
+
+                        if (distance (camera.position, world_chunk_pos) < render_distance * Chunk_Size)
+                        {
+                            auto current_chunk = world_create_chunk (&g_world,
+                                cast (s64) camera.position.x / Chunk_Size + x,
+                                cast (s64) camera.position.y / Chunk_Size + y,
+                                cast (s64) camera.position.z / Chunk_Size + z
+                            );
+
+                            if (!current_chunk->generated)
+                                chunk_generate (current_chunk);
+                        }
+                    }
+                }
+            }
+        }
+
         ImGui_ImplOpenGL3_NewFrame ();
         ImGui_ImplGlfw_NewFrame ();
         ImGui::NewFrame ();
@@ -151,7 +170,14 @@ int main (int argc, const char **args)
         {
             if (ImGui::Begin ("Metrics", &show_metrics_window))
             {
-                ImGui::Text ("Vertices: %lld", chunk.vertices.count);
+                s64 total_vertex_count = 0;
+                for_array (i, g_world.all_loaded_chunks)
+                    total_vertex_count += g_world.all_loaded_chunks[i]->vertices.count;
+
+                ImGui::Text ("Loaded chunks:      %lld", g_world.all_loaded_chunks.count);
+                ImGui::Text ("Total vertex count: %lld", total_vertex_count);
+                ImGui::Checkbox ("Generate new chunks", &generate_new_chunks);
+                ImGui::SliderInt ("Render distance", &render_distance, 1, 12);
             }
             ImGui::End ();
         }
@@ -163,8 +189,16 @@ int main (int argc, const char **args)
         glViewport (0, 0, width, height);
         glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        chunk_generate_mesh_data (&chunk);
-        draw_chunk (&chunk, &camera);
+        for_array (i, g_world.all_loaded_chunks)
+        {
+            auto chunk = g_world.all_loaded_chunks[i];
+            Vec3f world_chunk_pos = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->y * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
+            if (distance (world_chunk_pos, camera.position) < cast (f64) render_distance * Chunk_Size)
+            {
+                chunk_generate_mesh_data (chunk);
+                draw_chunk (chunk, &camera);
+            }
+        }
 
         ImGui::Render ();
         ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());

@@ -90,18 +90,27 @@ struct Chunk
     GLuint gl_vbo;
     GLuint opengl_is_stupid_vao;
     bool is_dirty;
+    bool generated;
 
     Block blocks[Chunk_Size * Chunk_Size * Chunk_Size];
 };
 
 struct World
 {
-    Chunk *center_chunk;
+    Chunk *origin_chunk;
     Array<Chunk *> all_loaded_chunks;
 };
+
+extern World g_world;
 
 void chunk_init (Chunk *chunk, s64 x, s64 y, s64 z);
 Chunk *chunk_get_at_relative_coordinates (Chunk *chunk, s64 x, s64 y, s64 z);
 Block chunk_get_block_in_chunk (Chunk *chunk, s64 x, s64 y, s64 z);
 Block chunk_get_block (Chunk *chunk, s64 x, s64 y, s64 z);
+void chunk_generate (Chunk *chunk);
 void chunk_generate_mesh_data (Chunk *chunk);
+
+void world_init (World *world, int chunks_to_pre_generate = 0);
+Chunk *world_get_chunk (World *world, s64 x, s64 y, s64 z);
+Chunk *world_create_chunk (World *world, s64 x, s64 y, s64 z);
+Chunk *world_generate_chunk (World *world, s64 x, s64 y, s64 z);
