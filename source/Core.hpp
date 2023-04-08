@@ -798,6 +798,53 @@ u32 hash_string (const String &str)
     return hash;
 }
 
+// Random
+
+typedef u32 LC_RNG;
+
+extern LC_RNG g_rng;
+
+inline
+void random_seed (LC_RNG *rng, s32 seed)
+{
+    *rng = seed & 0x7fffffff;
+    if (*rng == 0 || *rng == 1)
+        *rng += 2;
+}
+
+inline
+void random_seed (s32 seed)
+{
+    random_seed (&g_rng, seed);
+}
+
+inline
+u32 random_get (LC_RNG *rng)
+{
+    *rng = cast (u64) *rng * 4871 % 0x7fffffff;
+
+    return *rng;
+}
+
+inline
+u32 random_get ()
+{
+    return random_get (&g_rng);
+}
+
+inline
+u32 random_rangei (LC_RNG *rng, u32 low, u32 high)
+{
+    auto val = random_get (rng);
+
+    return low + (val % (high - low));
+}
+
+inline
+u32 random_rangei (u32 low, u32 high)
+{
+    return random_rangei (&g_rng, low, high);
+}
 
 // Platform layer
 
