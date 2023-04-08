@@ -1,5 +1,6 @@
 #pragma once
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <misc/single_file/imgui_single_file.h>
 
 #define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
