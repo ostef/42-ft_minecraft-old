@@ -23,7 +23,7 @@ void generate_vector_dot (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "T dot (const Vector<T, %d> &a, const Vector<T, %d> &b)\n{", N, N);
-    ap (b, "\treturn ");
+    ap (b, "    return ");
     unroll (b, N, " + ", "a.comps[%d] * b.comps[%d]");
     ln (b, ";");
     ln (b, "}");
@@ -33,7 +33,7 @@ void generate_vector_add (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> add (const Vector<T, %d> &a, const Vector<T, %d> &b)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "a.comps[%d] + b.comps[%d]");
     ln (b, "};");
     ln (b, "}");
@@ -43,7 +43,7 @@ void generate_vector_sub (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> sub (const Vector<T, %d> &a, const Vector<T, %d> &b)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "a.comps[%d] - b.comps[%d]");
     ln (b, "};");
     ln (b, "}");
@@ -53,7 +53,7 @@ void generate_vector_mul (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> mul (const Vector<T, %d> &a, T b)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "a.comps[%d] * b");
     ln (b, "};");
     ln (b, "}");
@@ -63,7 +63,7 @@ void generate_vector_div (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> div (const Vector<T, %d> &a, T b)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "a.comps[%d] / b");
     ln (b, "};");
     ln (b, "}");
@@ -73,7 +73,7 @@ void generate_vector_neg (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> neg (const Vector<T, %d> &v)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "-v.comps[%d]");
     ln (b, "};");
     ln (b, "}");
@@ -83,7 +83,7 @@ void generate_vector_scale (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> scale (const Vector<T, %d> &a, const Vector<T, %d> &b)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "a.comps[%d] * b.comps[%d]");
     ln (b, "};");
     ln (b, "}");
@@ -93,7 +93,7 @@ void generate_vector_abs (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> abs (const Vector<T, %d> &v)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "abs (v.comps[%d])");
     ln (b, "};");
     ln (b, "}");
@@ -103,7 +103,7 @@ void generate_vector_min (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> min (const Vector<T, %d> &a, const Vector<T, %d> &b)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "min (a.comps[%d], b.comps[%d])");
     ln (b, "};");
     ln (b, "}");
@@ -113,7 +113,7 @@ void generate_vector_max (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> max (const Vector<T, %d> &a, const Vector<T, %d> &b)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "max (a.comps[%d], b.comps[%d])");
     ln (b, "};");
     ln (b, "}");
@@ -123,7 +123,7 @@ void generate_vector_round (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> round (const Vector<T, %d> &v)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "round (v.comps[%d])");
     ln (b, "};");
     ln (b, "}");
@@ -133,7 +133,7 @@ void generate_vector_floor (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> floor (const Vector<T, %d> &v)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "floor (v.comps[%d])");
     ln (b, "};");
     ln (b, "}");
@@ -143,7 +143,7 @@ void generate_vector_ceil (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> ceil (const Vector<T, %d> &v)\n{", N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "ceil (v.comps[%d])");
     ln (b, "};");
     ln (b, "}");
@@ -153,7 +153,7 @@ void generate_vector_clamp (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> clamp (const Vector<T, %d> &v, const Vector<T, %d> &a, const Vector<T, %d> &b)\n{", N, N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "clamp (v.comps[%d], a.comps[%d], b.comps[%d])");
     ln (b, "};");
     ln (b, "}");
@@ -163,7 +163,7 @@ void generate_vector_lerp (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> lerp (const Vector<T, %d> &a, const Vector<T, %d> &b, f32 t)\n{", N, N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll (b, N, ", ", "lerp (a.comps[%d], b.comps[%d], t)");
     ln (b, "};");
     ln (b, "}");
@@ -174,6 +174,7 @@ void generate_vector_approx_zero (String_Builder *b, int N)
     ln (b, "template<typename T, typename E>");
     ln (b, "bool approx_zero (const Vector<T, %d> &v, E epsilon = 0.00001)\n{", N, N, N, N);
     ap (b, "\treturn ");
+    ap (b, "    return ");
     unroll (b, N, " && ", "approx_zero (v.comps[%d], epsilon)");
     ln (b, ";");
     ln (b, "}");
@@ -184,6 +185,7 @@ void generate_vector_approx_equals (String_Builder *b, int N)
     ln (b, "template<typename T, typename E>");
     ln (b, "bool approx_equals (const Vector<T, %d> &a, const Vector<T, %d> &b, E epsilon = 0.00001)\n{", N, N, N, N);
     ap (b, "\treturn ");
+    ap (b, "    return ");
     unroll (b, N, " && ", "approx_equals (a.comps[%d], b.comps[%d], epsilon)");
     ln (b, ";");
     ln (b, "}");
@@ -193,7 +195,7 @@ void generate_vector_equals (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "bool equals (const Vector<T, %d> &a, const Vector<T, %d> &b)\n{", N, N, N, N);
-    ap (b, "\treturn ");
+    ap (b, "    return ");
     unroll (b, N, " && ", "a.comps[%d] == b.comps[%d]");
     ln (b, ";");
     ln (b, "}");
@@ -274,7 +276,7 @@ void generate_matrix_add (String_Builder *b, int N, int M)
 {
     ln (b, "template<typename T>");
     ln (b, "Matrix<T, %d, %d> add (const Matrix<T, %d, %d> &a, const Matrix<T, %d, %d> &b)\n{", N, M, N, M, N, M);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll_double (b, N, M, ", ", "a.comps[%d] + b.comps[%d]");
     ln (b, "};");
     ln (b, "}");
@@ -284,7 +286,7 @@ void generate_matrix_sub (String_Builder *b, int N, int M)
 {
     ln (b, "template<typename T>");
     ln (b, "Matrix<T, %d, %d> sub (const Matrix<T, %d, %d> &a, const Matrix<T, %d, %d> &b)\n{", N, M, N, M, N, M);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll_double (b, N, M, ", ", "a.comps[%d] - b.comps[%d]");
     ln (b, "};");
     ln (b, "}");
@@ -294,7 +296,7 @@ void generate_matrix_mulf (String_Builder *b, int N, int M)
 {
     ln (b, "template<typename T>");
     ln (b, "Matrix<T, %d, %d> mul (const Matrix<T, %d, %d> &a, T b)\n{", N, M, N, M, N, M);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll_double (b, N, M, ", ", "a.comps[%d] * b");
     ln (b, "};");
     ln (b, "}");
@@ -304,12 +306,12 @@ void generate_matrix_mulv (String_Builder *b, int N, int M)
 {
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> mul (const Matrix<T, %d, %d> &a, const Vector<T, %d> &b)\n{", N, N, M, M);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
 
     for_range (i, 0, N)
     {
         if (i != 0)
-            ap (b, ",\n\t\t");
+            ap (b, ",\n        ");
 
         for_range (k, 0, M)
         {
@@ -324,12 +326,12 @@ void generate_matrix_mulv (String_Builder *b, int N, int M)
 
     ln (b, "template<typename T>");
     ln (b, "Vector<T, %d> mul (const Vector<T, %d> &a, const Matrix<T, %d, %d> &b)\n{", M, N, N, M);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
 
     for_range (j, 0, M)
     {
         if (j != 0)
-            ap (b, ",\n\t\t");
+            ap (b, ",\n        ");
 
         for_range (k, 0, N)
         {
@@ -347,12 +349,12 @@ void generate_matrix_mul (String_Builder *b, int N, int M, int P)
 {
     ln (b, "template<typename T>");
     ln (b, "Matrix<T, %d, %d> mul (const Matrix<T, %d, %d> &a, const Matrix<T, %d, %d> &b)\n{", N, P, N, M, M, P);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
 
     for_range (i, 0, N)
     {
         if (i != 0)
-            ap (b, "\n\t\t");
+            ap (b, "\n        ");
 
         for_range (j, 0, P)
         {
@@ -378,7 +380,7 @@ void generate_matrix_divf (String_Builder *b, int N, int M)
 {
     ln (b, "template<typename T>");
     ln (b, "Matrix<T, %d, %d> div (const Matrix<T, %d, %d> &a, T b)\n{", N, M, N, M, N, M);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
     unroll_double (b, N, M, ", ", "a.comps[%d] / b");
     ln (b, "};");
     ln (b, "}");
@@ -388,7 +390,7 @@ void generate_matrix_transposed (String_Builder *b, int N)
 {
     ln (b, "template<typename T>");
     ln (b, "Matrix<T, %d, %d> transposed (const Matrix<T, %d, %d> &m)\n{", N, N, N, N);
-    ap (b, "\treturn {");
+    ap (b, "    return {");
 
     for_range (i, 0, N)
     {
