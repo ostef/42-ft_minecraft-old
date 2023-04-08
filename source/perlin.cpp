@@ -127,18 +127,43 @@ void show_perlin_test_window (bool *opened)
     static u32 *texture_buffer;
     static int texture_size;
     static int ui_texture_size = 256;
+    static Vec2i offset;
 
-    ImGui::Begin ("Perlin Test", opened);
+    if (opened && !*opened)
+        return;
+
+    if (ImGui::Begin ("Perlin Test", opened))
     {
-        ImGui::BeginChild ("Image", {300, 300}, true, ImGuiWindowFlags_HorizontalScrollbar);
-            if (texture_handle)
-                ImGui::Image (cast (ImTextureID) texture_handle, {cast (f32) texture_size, cast (f32) texture_size});
-        ImGui::EndChild ();
+        {
+            auto child_height = ImGui::GetContentRegionAvail ().y - 3 * ImGui::GetFrameHeightWithSpacing ();
+            if (ImGui::BeginChild ("Image", {0, child_height}, true, ImGuiWindowFlags_HorizontalScrollbar))
+            {
+                if (texture_handle)
+                    ImGui::Image (cast (ImTextureID) texture_handle, {cast (f32) texture_size, cast (f32) texture_size});
+            }
+            ImGui::EndChild ();
+        }
 
         ImGui::SliderInt ("Size", &ui_texture_size, 128, 4096);
         ImGui::SliderFloat ("Scale", &scale, 0.001, 1);
 
+        bool should_generate = false;
+
         if (ImGui::Button ("Generate"))
+        {
+            should_generate = true;
+        }
+
+        ImGui::SameLine ();
+
+        if (ImGui::Button ("Randomize"))
+        {
+            offset.x = cast (int) random_get ();
+            offset.y = cast (int) random_get ();
+            should_generate = true;
+        }
+
+        if (should_generate)
         {
             if (texture_size != ui_texture_size || !texture_buffer)
             {
@@ -161,7 +186,7 @@ void show_perlin_test_window (bool *opened)
             {
                 for_range (j, 0, texture_size)
                 {
-                    auto value = perlin_noise (cast (f64) i * scale, cast (f64) j * scale, 0);
+                    auto value = perlin_noise (cast (f64) (i + offset.x) * scale, cast (f64) (j + offset.y) * scale, 0);
                     u8 color_comp = cast (u8) (value * 255);
                     texture_buffer[i * texture_size + j] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
                 }
