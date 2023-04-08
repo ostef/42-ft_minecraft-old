@@ -1,6 +1,5 @@
 #include "Minecraft.hpp"
 
-GLuint g_vao;
 GLuint g_block_shader;
 
 const char *GL_Block_Shader_Vertex = R"""(
@@ -18,7 +17,6 @@ uniform mat4 u_View_Projection_Matrix;
 void main ()
 {
     gl_Position = u_View_Projection_Matrix * vec4 (a_Position, 1);
-    // gl_Position = vec4 (a_Position, 1);
     Normal      = a_Normal;
     Tex_Coords  = a_Tex_Coords;
 }
@@ -86,9 +84,6 @@ bool render_init ()
         return false;
     }
 
-    glGenVertexArrays (1, &g_vao);
-    glBindVertexArray (g_vao);
-
     return true;
 }
 
@@ -138,6 +133,11 @@ void draw_chunk (Chunk *chunk, Camera *camera)
     auto loc = glGetUniformLocation (g_block_shader, "u_View_Projection_Matrix");
     glUniformMatrix4fv (loc, 1, GL_TRUE, camera->view_projection_matrix.comps);
 
+    glBindVertexArray (chunk->opengl_is_stupid_vao);
     glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
+
     glDrawArrays (GL_TRIANGLES, 0, chunk->vertices.count);
+
+    glBindBuffer (GL_ARRAY_BUFFER, 0);
+    glBindVertexArray (0);
 }

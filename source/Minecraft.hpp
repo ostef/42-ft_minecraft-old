@@ -88,6 +88,7 @@ struct Chunk
 
     Array<Vertex> vertices;
     GLuint gl_vbo;
+    GLuint opengl_is_stupid_vao;
     bool is_dirty;
 
     Block blocks[Chunk_Size * Chunk_Size * Chunk_Size];

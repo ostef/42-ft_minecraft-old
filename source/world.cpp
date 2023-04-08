@@ -11,6 +11,9 @@ void chunk_init (Chunk *chunk, s64 x, s64 y, s64 z)
     array_init (&chunk->vertices, heap_allocator (), Chunk_Size * Chunk_Size * Chunk_Size);
     chunk->is_dirty = true;
 
+    glGenVertexArrays (1, &chunk->opengl_is_stupid_vao);
+    glBindVertexArray (chunk->opengl_is_stupid_vao);
+
     glGenBuffers (1, &chunk->gl_vbo);
     glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
 
@@ -256,7 +259,11 @@ void chunk_generate_mesh_data (Chunk *chunk)
         }
     }
 
+    glBindVertexArray (chunk->opengl_is_stupid_vao);
     glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
+
     glBufferData (GL_ARRAY_BUFFER, sizeof (Vertex) * chunk->vertices.count, chunk->vertices.data, GL_DYNAMIC_DRAW);
+
+    glBindVertexArray (0);
     glBindBuffer (GL_ARRAY_BUFFER, 0);
 }
