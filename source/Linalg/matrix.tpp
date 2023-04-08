@@ -81,9 +81,10 @@ Matrix<T, N, P> mul (const Matrix<T, N, M> &a, const Matrix<T, M, P> &b)
         for_range (j, 0, P)
         {
             int index = i * P + j;
+            res.comps[index] = 0;
             for_range (k, 0, M)
             {
-                res.comps[index] += a.comps[i * M + l] * b.comps[k * P + j];
+                res.comps[index] += a.comps[i * M + k] * b.comps[k * P + j];
             }
         }
     }
