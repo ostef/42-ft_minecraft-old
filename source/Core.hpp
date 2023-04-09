@@ -700,7 +700,7 @@ template<typename Key, typename Value>
 Hash_Map_Insert_Result<Key, Value> hash_map_insert (Hash_Map<Key, Value> *map, const Key &key, const Value &value)
 {
     auto result = hash_map_insert (map, key);
-    *(result.ptr) = value;
+    memcpy (result.ptr, &value, sizeof (Value));
 
     return result;
 }
