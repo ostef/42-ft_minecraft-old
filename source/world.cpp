@@ -85,7 +85,7 @@ void chunk_generate (Chunk *chunk)
 {
     static const f64 Surface_Scale = 0.0172;
     static const f64 Surface_Height_Threshold = 8;
-    static const f64 Surface_Level = 16;
+    static const f64 Surface_Level = 64;
     static const f64 Cavern_Scale = 0.05674;
 
     if (chunk->generated)
@@ -115,6 +115,10 @@ void chunk_generate (Chunk *chunk)
                 else if (y > Surface_Level + surface * Surface_Height_Threshold - Surface_Height_Threshold)
                 {
                     chunk->blocks[index].type = Block_Type_Stone;
+                }
+                else if (y == Min_Chunk_Y * Chunk_Size)
+                {
+                    chunk->blocks[index].type = Block_Type_Bedrock;
                 }
                 else
                 {
