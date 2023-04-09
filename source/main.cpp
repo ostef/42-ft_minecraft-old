@@ -97,7 +97,7 @@ int main (int argc, const char **args)
     Vec3f camera_direction {};
 
     Camera camera = {};
-    camera.position.y = 40;
+    camera.position.y = 80;
     camera.fov = 60;
     camera.rotation = {};
     camera.transform = {};
@@ -117,6 +117,7 @@ int main (int argc, const char **args)
     s64 chunk_generation_samples = 0;
     s64 chunk_creation_time = 0;
     s64 chunk_creation_samples = 0;
+    s64 drawn_vertex_count = 0;
 
     bool generate_new_chunks = true;
 
@@ -142,25 +143,27 @@ int main (int argc, const char **args)
 
         if (generate_new_chunks)
         {
-            for_range (x, -render_distance, render_distance)
+            s64 camera_chunk_x = cast (s64) camera.position.x / Chunk_Size;
+            s64 camera_chunk_y = cast (s64) camera.position.y / Chunk_Size;
+            s64 camera_chunk_z = cast (s64) camera.position.z / Chunk_Size;
+
+            for_range (x, camera_chunk_x - render_distance, camera_chunk_x + render_distance)
             {
-                for_range (y, -generation_height, generation_height)
+                for_range (y,
+                    clamp (camera_chunk_y - generation_height, cast (s64) Min_Chunk_Y, cast (s64) Max_Chunk_Y),
+                    clamp (camera_chunk_y + generation_height, cast (s64) Min_Chunk_Y, cast (s64) Max_Chunk_Y)
+                )
                 {
-                    for_range (z, -render_distance, render_distance)
+                    for_range (z, camera_chunk_z - render_distance, camera_chunk_z + render_distance)
                     {
                         Vec2f planar_camera_pos = Vec2f{camera.position.x, camera.position.z};
                         Vec2f planar_chunk_pos = Vec2f{cast (f32) x * Chunk_Size, cast (f32) z * Chunk_Size};
-                        planar_chunk_pos += planar_camera_pos;
 
                         if (distance (planar_camera_pos, planar_chunk_pos) < render_distance * Chunk_Size)
                         {
                             s64 time_start = time_current_monotonic ();
 
-                            auto current_chunk = world_create_chunk (&g_world,
-                                cast (s64) camera.position.x / Chunk_Size + x,
-                                cast (s64) camera.position.y / Chunk_Size + y,
-                                cast (s64) camera.position.z / Chunk_Size + z
-                            );
+                            auto current_chunk = world_create_chunk (&g_world, x, y, z);
 
                             if (!current_chunk->generated)
                             {
@@ -192,12 +195,22 @@ int main (int argc, const char **args)
             {
                 s64 total_vertex_count = 0;
                 for_hash_map (it, g_world.all_loaded_chunks)
-                    total_vertex_count += (*it.value)->vertices.count;
+                {
+                    for_range (i, 0, Max_Chunk_Y - Min_Chunk_Y)
+                    {
+                        auto chunk = (*it.value)[i];
+                        if (chunk)
+                            total_vertex_count += chunk->vertex_count;
+                    }
+                }
 
+                ImGui::Text ("Position: %.2f %.2f %.2f", camera.position.x, camera.position.y, camera.position.z);
                 ImGui::Text ("Average chunk creation   time: %f us", chunk_creation_time / cast (f32) chunk_creation_samples);
                 ImGui::Text ("Average chunk generation time: %f us", chunk_generation_time / cast (f32) chunk_generation_samples);
-                ImGui::Text ("Loaded chunks:      %lld", g_world.all_loaded_chunks.count);
+                ImGui::Text ("Loaded chunks: %lld", g_world.all_loaded_chunks.count);
                 ImGui::Text ("Total vertex count: %lld", total_vertex_count);
+                ImGui::Text ("Drawn vertex count: %lld", drawn_vertex_count);
+                ImGui::Text ("Average vertices per chunk: %lld", total_vertex_count / g_world.all_loaded_chunks.count);
                 ImGui::Checkbox ("Generate new chunks", &generate_new_chunks);
                 ImGui::SliderInt ("Render distance", &render_distance, 1, 12);
             }
@@ -211,15 +224,23 @@ int main (int argc, const char **args)
         glViewport (0, 0, width, height);
         glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        drawn_vertex_count = 0;
         for_hash_map (it, g_world.all_loaded_chunks)
         {
-            auto chunk = *it.value;
-            Vec3f world_chunk_pos = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->y * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
-
-            if (distance (world_chunk_pos, camera.position) < cast (f64) render_distance * Chunk_Size)
+            for_range (i, 0, Max_Chunk_Y - Min_Chunk_Y)
             {
-                chunk_generate_mesh_data (chunk);
-                draw_chunk (chunk, &camera);
+                auto chunk = (*it.value)[i];
+                if (!chunk)
+                    continue;
+
+                Vec3f world_chunk_pos = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->y * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
+
+                if (distance (world_chunk_pos, camera.position) < cast (f64) render_distance * Chunk_Size)
+                {
+                    chunk_generate_mesh_data (chunk);
+                    draw_chunk (chunk, &camera);
+                    drawn_vertex_count += chunk->vertex_count;
+                }
             }
         }
 

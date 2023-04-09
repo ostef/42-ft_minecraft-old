@@ -8,7 +8,6 @@ void chunk_init (Chunk *chunk, s64 x, s64 y, s64 z)
     chunk->y = y;
     chunk->z = z;
 
-    array_init (&chunk->vertices, heap_allocator (), Chunk_Size * Chunk_Size * Chunk_Size);
     chunk->is_dirty = true;
 
     glGenVertexArrays (1, &chunk->opengl_is_stupid_vao);
@@ -44,22 +43,22 @@ Chunk *chunk_get_at_relative_coordinates (Chunk *chunk, s64 *x, s64 *y, s64 *z)
     }
     while (chunk && *y < 0)
     {
-        chunk = chunk->south;
+        chunk = chunk->below;
         *y += Chunk_Size;
     }
     while (chunk && *y >= Chunk_Size)
     {
-        chunk = chunk->north;
+        chunk = chunk->above;
         *y -= Chunk_Size;
     }
     while (chunk && *z < 0)
     {
-        chunk = chunk->below;
+        chunk = chunk->south;
         *z += Chunk_Size;
     }
     while (chunk && *z >= Chunk_Size)
     {
-        chunk = chunk->above;
+        chunk = chunk->north;
         *z -= Chunk_Size;
     }
 
@@ -138,137 +137,137 @@ enum
 {
     Block_Face_East  = 0x01, // +X
     Block_Face_West  = 0x02, // -X
-    Block_Face_North = 0x04, // +Y
-    Block_Face_South = 0x08, // -Y
-    Block_Face_Above = 0x10, // +Z
-    Block_Face_Below = 0x20, // -Z
+    Block_Face_Above = 0x04, // +Y
+    Block_Face_Below = 0x08, // -Y
+    Block_Face_North = 0x10, // +Z
+    Block_Face_South = 0x20, // -Z
 };
 
-void push_block (Chunk *chunk, const Vec3f &position, Block_Face_Flags visible_faces)
+void push_block (Array<Vertex> *vertices, const Vec3f &position, Block_Face_Flags visible_faces)
 {
     if (visible_faces & Block_Face_East)
     {
-        auto v = array_push (&chunk->vertices, {position, {1, 0, 0}});
+        auto v = array_push (vertices, {position, {1, 0, 0}});
         v->position += {0.5, -0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, {1, 0, 0}});
         v->position += {0.5, 0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, {1, 0, 0}});
         v->position += {0.5, 0.5, 0.5};
 
-        v = array_push (&chunk->vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, {1, 0, 0}});
         v->position += {0.5, -0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, {1, 0, 0}});
         v->position += {0.5, 0.5, 0.5};
 
-        v = array_push (&chunk->vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, {1, 0, 0}});
         v->position += {0.5, -0.5, 0.5};
     }
 
     if (visible_faces & Block_Face_West)
     {
-        auto v = array_push (&chunk->vertices, {position, {-1, 0, 0}});
+        auto v = array_push (vertices, {position, {-1, 0, 0}});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, {-1, 0, 0}});
         v->position += {-0.5, 0.5, 0.5};
 
-        v = array_push (&chunk->vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, {-1, 0, 0}});
         v->position += {-0.5, 0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, {-1, 0, 0}});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, {-1, 0, 0}});
         v->position += {-0.5, -0.5, 0.5};
 
-        v = array_push (&chunk->vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, {-1, 0, 0}});
         v->position += {-0.5, 0.5, 0.5};
-    }
-
-    if (visible_faces & Block_Face_North)
-    {
-        auto v = array_push (&chunk->vertices, {position, {0, 1, 0}});
-        v->position += {-0.5, 0.5, -0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, 1, 0}});
-        v->position += {0.5, 0.5, 0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, 1, 0}});
-        v->position += {0.5, 0.5, -0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, 1, 0}});
-        v->position += {-0.5, 0.5, -0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, 1, 0}});
-        v->position += {-0.5, 0.5, 0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, 1, 0}});
-        v->position += {0.5, 0.5, 0.5};
-    }
-
-    if (visible_faces & Block_Face_South)
-    {
-        auto v = array_push (&chunk->vertices, {position, {0, -1, 0}});
-        v->position += {-0.5, -0.5, -0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, -1, 0}});
-        v->position += {0.5, -0.5, -0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, -1, 0}});
-        v->position += {0.5, -0.5, 0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, -1, 0}});
-        v->position += {-0.5, -0.5, -0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, -1, 0}});
-        v->position += {0.5, -0.5, 0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, -1, 0}});
-        v->position += {-0.5, -0.5, 0.5};
     }
 
     if (visible_faces & Block_Face_Above)
     {
-        auto v = array_push (&chunk->vertices, {position, {0, 0, 1}});
-        v->position += {-0.5, -0.5, 0.5};
+        auto v = array_push (vertices, {position, {0, 1, 0}});
+        v->position += {-0.5, 0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {0, 0, 1}});
-        v->position += {0.5, -0.5, 0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, 0, 1}});
+        v = array_push (vertices, {position, {0, 1, 0}});
         v->position += {0.5, 0.5, 0.5};
 
-        v = array_push (&chunk->vertices, {position, {0, 0, 1}});
-        v->position += {-0.5, -0.5, 0.5};
+        v = array_push (vertices, {position, {0, 1, 0}});
+        v->position += {0.5, 0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {0, 0, 1}});
-        v->position += {0.5, 0.5, 0.5};
+        v = array_push (vertices, {position, {0, 1, 0}});
+        v->position += {-0.5, 0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {0, 0, 1}});
+        v = array_push (vertices, {position, {0, 1, 0}});
         v->position += {-0.5, 0.5, 0.5};
+
+        v = array_push (vertices, {position, {0, 1, 0}});
+        v->position += {0.5, 0.5, 0.5};
     }
 
     if (visible_faces & Block_Face_Below)
     {
-        auto v = array_push (&chunk->vertices, {position, {0, 0, -1}});
+        auto v = array_push (vertices, {position, {0, -1, 0}});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {0, 0, -1}});
-        v->position += {0.5, 0.5, -0.5};
-
-        v = array_push (&chunk->vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, {0, -1, 0}});
         v->position += {0.5, -0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, {0, -1, 0}});
+        v->position += {0.5, -0.5, 0.5};
+
+        v = array_push (vertices, {position, {0, -1, 0}});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, {0, -1, 0}});
+        v->position += {0.5, -0.5, 0.5};
+
+        v = array_push (vertices, {position, {0, -1, 0}});
+        v->position += {-0.5, -0.5, 0.5};
+    }
+
+    if (visible_faces & Block_Face_North)
+    {
+        auto v = array_push (vertices, {position, {0, 0, 1}});
+        v->position += {-0.5, -0.5, 0.5};
+
+        v = array_push (vertices, {position, {0, 0, 1}});
+        v->position += {0.5, -0.5, 0.5};
+
+        v = array_push (vertices, {position, {0, 0, 1}});
+        v->position += {0.5, 0.5, 0.5};
+
+        v = array_push (vertices, {position, {0, 0, 1}});
+        v->position += {-0.5, -0.5, 0.5};
+
+        v = array_push (vertices, {position, {0, 0, 1}});
+        v->position += {0.5, 0.5, 0.5};
+
+        v = array_push (vertices, {position, {0, 0, 1}});
+        v->position += {-0.5, 0.5, 0.5};
+    }
+
+    if (visible_faces & Block_Face_South)
+    {
+        auto v = array_push (vertices, {position, {0, 0, -1}});
+        v->position += {-0.5, -0.5, -0.5};
+
+        v = array_push (vertices, {position, {0, 0, -1}});
+        v->position += {0.5, 0.5, -0.5};
+
+        v = array_push (vertices, {position, {0, 0, -1}});
+        v->position += {0.5, -0.5, -0.5};
+
+        v = array_push (vertices, {position, {0, 0, -1}});
+        v->position += {-0.5, -0.5, -0.5};
+
+        v = array_push (vertices, {position, {0, 0, -1}});
         v->position += {-0.5, 0.5, -0.5};
 
-        v = array_push (&chunk->vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, {0, 0, -1}});
         v->position += {0.5, 0.5, -0.5};
     }
 }
@@ -278,9 +277,14 @@ void chunk_generate_mesh_data (Chunk *chunk)
     if (!chunk->is_dirty)
        return;
 
-    defer (chunk->is_dirty = false);
+    auto state = arena_get_state (&frame_arena);
+    defer (arena_set_state (&frame_arena, state));
 
-    array_clear (&chunk->vertices);
+    Array<Vertex> vertices;
+    array_init (&vertices, frame_allocator, 12000);
+
+    defer (chunk->vertex_count = vertices.count);
+    defer (chunk->is_dirty = false);
 
     Vec3f position = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->y * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
     for_range (x, 0, Chunk_Size)
@@ -299,15 +303,15 @@ void chunk_generate_mesh_data (Chunk *chunk)
                 if (chunk_get_block (chunk, x - 1, y, z).type == Block_Type_Air)
                     visible_faces |= Block_Face_West;
                 if (chunk_get_block (chunk, x, y + 1, z).type == Block_Type_Air)
-                    visible_faces |= Block_Face_North;
-                if (chunk_get_block (chunk, x, y - 1, z).type == Block_Type_Air)
-                    visible_faces |= Block_Face_South;
-                if (chunk_get_block (chunk, x, y, z + 1).type == Block_Type_Air)
                     visible_faces |= Block_Face_Above;
-                if (chunk_get_block (chunk, x, y, z - 1).type == Block_Type_Air)
+                if (chunk_get_block (chunk, x, y - 1, z).type == Block_Type_Air)
                     visible_faces |= Block_Face_Below;
+                if (chunk_get_block (chunk, x, y, z + 1).type == Block_Type_Air)
+                    visible_faces |= Block_Face_North;
+                if (chunk_get_block (chunk, x, y, z - 1).type == Block_Type_Air)
+                    visible_faces |= Block_Face_South;
 
-                push_block (chunk, position + Vec3f{cast (f32) x, cast (f32) y, cast (f32) z}, visible_faces);
+                push_block (&vertices, position + Vec3f{cast (f32) x, cast (f32) y, cast (f32) z}, visible_faces);
             }
         }
     }
@@ -315,25 +319,25 @@ void chunk_generate_mesh_data (Chunk *chunk)
     glBindVertexArray (chunk->opengl_is_stupid_vao);
     glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
 
-    glBufferData (GL_ARRAY_BUFFER, sizeof (Vertex) * chunk->vertices.count, chunk->vertices.data, GL_DYNAMIC_DRAW);
+    glBufferData (GL_ARRAY_BUFFER, sizeof (Vertex) * vertices.count, vertices.data, GL_DYNAMIC_DRAW);
 
     glBindVertexArray (0);
     glBindBuffer (GL_ARRAY_BUFFER, 0);
 }
 
-u32 hash_vec3i (const Vec3i &v)
+u32 hash_vec2i (const Vec2i &v)
 {
-    return hash_combine (hash_s32 (v.x), hash_combine (hash_s32 (v.y), hash_s32 (v.z)));
+    return hash_combine (hash_s32 (v.x), hash_s32 (v.y));
 }
 
-bool compare_vec3i (const Vec3i &a, const Vec3i &b)
+bool compare_vec2i (const Vec2i &a, const Vec2i &b)
 {
     return a == b;
 }
 
 void world_init (World *world, int chunks_to_pre_generate)
 {
-    hash_map_init (&world->all_loaded_chunks, hash_vec3i, compare_vec3i, heap_allocator ());
+    hash_map_init (&world->all_loaded_chunks, hash_vec2i, compare_vec2i, heap_allocator ());
 
     world->origin_chunk = world_create_chunk (world, 0, 0, 0);
     chunk_generate (world->origin_chunk);
@@ -351,30 +355,39 @@ void world_init (World *world, int chunks_to_pre_generate)
     }
 }
 
+Chunk_Column *world_get_chunk_column (World *world, s64 x, s64 z)
+{
+    return hash_map_get (&world->all_loaded_chunks, {cast (s32) x, cast (s32) z});
+}
+
 Chunk *world_get_chunk (World *world, s64 x, s64 y, s64 z)
 {
-    auto ptr_chunk = hash_map_get (&world->all_loaded_chunks, {cast (s32) x, cast (s32) y, cast (s32) z});
-    if (!ptr_chunk)
+    assert (y >= Min_Chunk_Y && y <= Max_Chunk_Y, "y is %lld", y);
+
+    auto column = hash_map_get (&world->all_loaded_chunks, {cast (s32) x, cast (s32) z});
+    if (!column)
         return null;
 
-    return *ptr_chunk;
+    return (*column)[y - Min_Chunk_Y];
 }
 
 Chunk *world_create_chunk (World *world, s64 x, s64 y, s64 z)
 {
-    auto chunk = world_get_chunk (world, x, y, z);
-    if (chunk)
-        return chunk;
+    assert (y >= Min_Chunk_Y && y <= Max_Chunk_Y, "y is %lld", y);
 
-    chunk = mem_alloc_uninit (Chunk, 1, heap_allocator ());
+    auto column = world_get_chunk_column (world, x, z);
+    if (column && (*column)[y - Min_Chunk_Y])
+        return (*column)[y - Min_Chunk_Y];
+
+    auto chunk = mem_alloc_uninit (Chunk, 1, heap_allocator ());
     println ("[WORLD] Created new chunk at %lld %lld %lld", x, y, z);
     chunk_init (chunk, x, y, z);
     chunk->east  = world_get_chunk (world, x + 1, y, z);
     chunk->west  = world_get_chunk (world, x - 1, y, z);
-    chunk->north = world_get_chunk (world, x, y + 1, z);
-    chunk->south = world_get_chunk (world, x, y - 1, z);
-    chunk->above = world_get_chunk (world, x, y, z + 1);
-    chunk->below = world_get_chunk (world, x, y, z - 1);
+    chunk->north = world_get_chunk (world, x, y, z + 1);
+    chunk->south = world_get_chunk (world, x, y, z - 1);
+    chunk->above = y < Max_Chunk_Y ? world_get_chunk (world, x, y + 1, z) : null;
+    chunk->below = y > Min_Chunk_Y ? world_get_chunk (world, x, y - 1, z) : null;
 
     if (chunk->east)
     {
@@ -407,7 +420,13 @@ Chunk *world_create_chunk (World *world, s64 x, s64 y, s64 z)
         chunk->below->is_dirty = true;
     }
 
-    hash_map_insert (&world->all_loaded_chunks, {cast (s32) x, cast (s32) y, cast (s32) z}, chunk);
+    if (!column)
+    {
+        column = hash_map_insert (&world->all_loaded_chunks, {cast (s32) x, cast (s32) z}).ptr;
+        memset (*column, 0, sizeof (*column));
+    }
+
+    (*column)[y - Min_Chunk_Y] = chunk;
 
     return chunk;
 }

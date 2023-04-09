@@ -86,7 +86,7 @@ struct Chunk
 
     s64 x, y, z;
 
-    Array<Vertex> vertices;
+    s64 vertex_count;
     GLuint gl_vbo;
     GLuint opengl_is_stupid_vao;
     bool is_dirty;
@@ -95,11 +95,15 @@ struct Chunk
     Block blocks[Chunk_Size * Chunk_Size * Chunk_Size];
 };
 
+const int Min_Chunk_Y = -4;    // -64
+const int Max_Chunk_Y = 20;    // 320
+
+typedef Chunk *Chunk_Column[Max_Chunk_Y - Min_Chunk_Y + 1];
+
 struct World
 {
     Chunk *origin_chunk;
-
-    Hash_Map<Vec3i, Chunk *> all_loaded_chunks;
+    Hash_Map<Vec2i, Chunk_Column> all_loaded_chunks;
 };
 
 extern World g_world;
@@ -112,6 +116,7 @@ void chunk_generate (Chunk *chunk);
 void chunk_generate_mesh_data (Chunk *chunk);
 
 void world_init (World *world, int chunks_to_pre_generate = 0);
+Chunk_Column *world_get_chunk_column (World *world, s64 x, s64 z);
 Chunk *world_get_chunk (World *world, s64 x, s64 y, s64 z);
 Chunk *world_create_chunk (World *world, s64 x, s64 y, s64 z);
 Chunk *world_generate_chunk (World *world, s64 x, s64 y, s64 z);

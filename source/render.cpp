@@ -131,7 +131,7 @@ void update_flying_camera (Camera *camera)
 
 void draw_chunk (Chunk *chunk, Camera *camera)
 {
-    if (chunk->vertices.count == 0)
+    if (chunk->vertex_count == 0)
         return;
 
     glUseProgram (g_block_shader);
@@ -141,7 +141,7 @@ void draw_chunk (Chunk *chunk, Camera *camera)
     glBindVertexArray (chunk->opengl_is_stupid_vao);
     glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
 
-    glDrawArrays (GL_TRIANGLES, 0, chunk->vertices.count);
+    glDrawArrays (GL_TRIANGLES, 0, chunk->vertex_count);
 
     glBindBuffer (GL_ARRAY_BUFFER, 0);
     glBindVertexArray (0);
