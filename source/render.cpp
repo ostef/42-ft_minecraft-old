@@ -9,11 +9,16 @@ const char *GL_Block_Shader_Vertex = R"""(
 
 layout (location = 0) in vec3 a_Position;
 layout (location = 1) in int a_Face;
+layout (location = 2) in int a_Block_Id;
+layout (location = 3) in int a_Block_Corner;
+
+const int Atlas_Cell_Size = 16;
 
 out vec3 Normal;
 out vec2 Tex_Coords;
 
 uniform mat4 u_View_Projection_Matrix;
+uniform sampler2D u_Texture_Atlas;
 
 void main ()
 {
@@ -28,6 +33,21 @@ void main ()
     case 4: Normal = vec3 (0, 0,  1); break;
     case 5: Normal = vec3 (0, 0, -1); break;
     }
+
+    int atlas_size = textureSize (u_Texture_Atlas, 0).x / Atlas_Cell_Size;    // Assume width == height
+    int atlas_cell_x = a_Block_Id % atlas_size;
+    int atlas_cell_y = a_Block_Id / atlas_size;
+
+    switch (a_Block_Corner)
+    {
+    case 0: break;
+    case 1: atlas_cell_x += 1; break;
+    case 2: atlas_cell_y -= 1; break;
+    case 3: atlas_cell_x += 1; atlas_cell_y -= 1; break;
+    }
+
+    Tex_Coords.x = float (atlas_cell_x) / float (atlas_size);
+    Tex_Coords.y = 1 - float (atlas_cell_y) / float (atlas_size);
 }
 )""";
 
@@ -39,11 +59,13 @@ in vec2 Tex_Coords;
 
 out vec4 Frag_Color;
 
+uniform sampler2D u_Texture_Atlas;
+
 void main ()
 {
     vec3 light_direction = normalize (vec3 (1, 1, 1));
-    Frag_Color.rgb = Normal; //vec3 (1, 1, 1) * max (dot (light_direction, Normal), 0);
-    Frag_Color.a = 1;
+    vec4 sampled = texture (u_Texture_Atlas, Tex_Coords);
+    Frag_Color = sampled;// * max (dot (light_direction, Normal), 0.1);
 }
 )""";
 
@@ -100,13 +122,13 @@ bool load_texture_atlas (const char *textures_dirname)
 {
     static const char *Texture_Names[] = {
         "dirt.png",
-        "bedrock.png",
         "stone.png",
+        "bedrock.png",
     };
 
     static const int Texture_Count = array_size (Texture_Names);
 
-    int atlas_cell_size = cast (int) ceil (sqrt (Texture_Count));
+    int atlas_cell_size = cast (int) ceil (sqrt (Texture_Count + 1));
     g_texture_atlas_size = 16 * atlas_cell_size;
     u32 *atlas_data = mem_alloc_typed (u32, g_texture_atlas_size * g_texture_atlas_size, heap_allocator ());
     defer (mem_free (atlas_data, heap_allocator ()));
@@ -130,8 +152,9 @@ bool load_texture_atlas (const char *textures_dirname)
             return false;
         }
 
-        int cell_x = i % atlas_cell_size;
-        int cell_y = i / atlas_cell_size;
+        int block_id = i + 1;   // Leave one for air
+        int cell_x = block_id % atlas_cell_size;
+        int cell_y = block_id / atlas_cell_size;
 
         for_range (row, 0, 16)
         {
@@ -141,7 +164,7 @@ bool load_texture_atlas (const char *textures_dirname)
 
     glGenTextures (1, &g_texture_atlas);
     glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, g_texture_atlas_size, g_texture_atlas_size, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas_data);
     glBindTexture (GL_TEXTURE_2D, 0);

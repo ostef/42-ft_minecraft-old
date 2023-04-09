@@ -76,6 +76,14 @@ enum Block_Face : u8
     Block_Face_South = 4,
 };
 
+enum Block_Corner : u8
+{
+    Block_Corner_Top_Left     = 0,
+    Block_Corner_Top_Right    = 1,
+    Block_Corner_Bottom_Left  = 2,
+    Block_Corner_Bottom_Right = 3,
+};
+
 typedef int Block_Face_Flags;
 enum
 {
@@ -91,6 +99,8 @@ struct Vertex
 {
     Vec3f position;
     Block_Face face;
+    u8 block_id;
+    Block_Corner block_corner;
 };
 
 bool render_init ();
