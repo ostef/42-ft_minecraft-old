@@ -190,8 +190,8 @@ int main (int argc, const char **args)
             if (ImGui::Begin ("Metrics", &show_metrics_window))
             {
                 s64 total_vertex_count = 0;
-                for_array (i, g_world.all_loaded_chunks)
-                    total_vertex_count += g_world.all_loaded_chunks[i]->vertices.count;
+                for_hash_map (it, g_world.all_loaded_chunks)
+                    total_vertex_count += (*it.value)->vertices.count;
 
                 ImGui::Text ("Average chunk creation   time: %f us", chunk_creation_time / cast (f32) chunk_creation_samples);
                 ImGui::Text ("Average chunk generation time: %f us", chunk_generation_time / cast (f32) chunk_generation_samples);
@@ -210,10 +210,11 @@ int main (int argc, const char **args)
         glViewport (0, 0, width, height);
         glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        for_array (i, g_world.all_loaded_chunks)
+        for_hash_map (it, g_world.all_loaded_chunks)
         {
-            auto chunk = g_world.all_loaded_chunks[i];
+            auto chunk = *it.value;
             Vec3f world_chunk_pos = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->y * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
+
             if (distance (world_chunk_pos, camera.position) < cast (f64) render_distance * Chunk_Size)
             {
                 chunk_generate_mesh_data (chunk);

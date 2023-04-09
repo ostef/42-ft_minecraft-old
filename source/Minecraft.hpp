@@ -98,7 +98,8 @@ struct Chunk
 struct World
 {
     Chunk *origin_chunk;
-    Array<Chunk *> all_loaded_chunks;
+
+    Hash_Map<Vec3i, Chunk *> all_loaded_chunks;
 };
 
 extern World g_world;

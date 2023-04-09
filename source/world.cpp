@@ -317,9 +317,19 @@ void chunk_generate_mesh_data (Chunk *chunk)
     glBindBuffer (GL_ARRAY_BUFFER, 0);
 }
 
+u32 hash_vec3i (const Vec3i &v)
+{
+    return hash_combine (hash_s32 (v.x), hash_combine (hash_s32 (v.y), hash_s32 (v.z)));
+}
+
+bool compare_vec3i (const Vec3i &a, const Vec3i &b)
+{
+    return a == b;
+}
+
 void world_init (World *world, int chunks_to_pre_generate)
 {
-    array_init (&world->all_loaded_chunks, heap_allocator ());
+    hash_map_init (&world->all_loaded_chunks, hash_vec3i, compare_vec3i, heap_allocator ());
 
     world->origin_chunk = world_create_chunk (world, 0, 0, 0);
     chunk_generate (world->origin_chunk);
@@ -339,54 +349,28 @@ void world_init (World *world, int chunks_to_pre_generate)
 
 Chunk *world_get_chunk (World *world, s64 x, s64 y, s64 z)
 {
-    for_array (i, world->all_loaded_chunks)
-    {
-        auto chunk = world->all_loaded_chunks[i];
-        if (chunk->x == x && chunk->y == y && chunk->z == z)
-            return chunk;
-    }
+    auto ptr_chunk = hash_map_get (&world->all_loaded_chunks, {cast (s32) x, cast (s32) y, cast (s32) z});
+    if (!ptr_chunk)
+        return null;
 
-    return null;
+    return *ptr_chunk;
 }
 
 Chunk *world_create_chunk (World *world, s64 x, s64 y, s64 z)
 {
-    Chunk *east = null;
-    Chunk *west = null;
-    Chunk *north = null;
-    Chunk *south = null;
-    Chunk *above = null;
-    Chunk *below = null;
+    auto chunk = world_get_chunk (world, x, y, z);
+    if (chunk)
+        return chunk;
 
-    for_array (i, world->all_loaded_chunks)
-    {
-        auto chunk = world->all_loaded_chunks[i];
-        if (chunk->x == x && chunk->y == y && chunk->z == z)
-            return chunk;
-
-        if (chunk->x == x - 1 && chunk->y == y && chunk->z == z)
-            west = chunk;
-        else if (chunk->x == x + 1 && chunk->y == y && chunk->z == z)
-            east = chunk;
-        else if (chunk->x == x && chunk->y == y - 1 && chunk->z == z)
-            south = chunk;
-        else if (chunk->x == x && chunk->y == y + 1 && chunk->z == z)
-            north = chunk;
-        else if (chunk->x == x && chunk->y == y && chunk->z == z - 1)
-            below = chunk;
-        else if (chunk->x == x && chunk->y == y && chunk->z == z + 1)
-            above = chunk;
-    }
-
-    Chunk *chunk = mem_alloc_uninit (Chunk, 1, heap_allocator ());
+    chunk = mem_alloc_uninit (Chunk, 1, heap_allocator ());
     println ("[WORLD] Created new chunk at %lld %lld %lld", x, y, z);
     chunk_init (chunk, x, y, z);
-    chunk->east = east;
-    chunk->west = west;
-    chunk->north = north;
-    chunk->south = south;
-    chunk->above = above;
-    chunk->below = below;
+    chunk->east  = world_get_chunk (world, x + 1, y, z);
+    chunk->west  = world_get_chunk (world, x - 1, y, z);
+    chunk->north = world_get_chunk (world, x, y + 1, z);
+    chunk->south = world_get_chunk (world, x, y - 1, z);
+    chunk->above = world_get_chunk (world, x, y, z + 1);
+    chunk->below = world_get_chunk (world, x, y, z - 1);
 
     if (chunk->east)
     {
@@ -419,7 +403,7 @@ Chunk *world_create_chunk (World *world, s64 x, s64 y, s64 z)
         chunk->below->is_dirty = true;
     }
 
-    array_push (&world->all_loaded_chunks, chunk);
+    hash_map_insert (&world->all_loaded_chunks, {cast (s32) x, cast (s32) y, cast (s32) z}, chunk);
 
     return chunk;
 }
