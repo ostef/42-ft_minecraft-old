@@ -18,12 +18,13 @@ void glfw_error_callback (int error, const char *description)
 
 int main (int argc, const char **args)
 {
-    Vec2f p = {1, 2};
-
     platform_init ();
     crash_handler_init ();
 
-    arena_init (&frame_arena, 4096, heap_allocator ());
+    if (!arena_init (&frame_arena, 4096, heap_allocator ()))
+        panic ("Could not initialize frame arena");
+
+    frame_allocator = arena_allocator (&frame_arena);
 
     glfwSetErrorCallback (glfw_error_callback);
 
