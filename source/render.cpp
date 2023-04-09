@@ -7,8 +7,7 @@ const char *GL_Block_Shader_Vertex = R"""(
 #version 330 core
 
 layout (location = 0) in vec3 a_Position;
-layout (location = 1) in vec3 a_Normal;
-layout (location = 2) in vec2 a_Tex_Coords;
+layout (location = 1) in int a_Face;
 
 out vec3 Normal;
 out vec2 Tex_Coords;
@@ -18,8 +17,19 @@ uniform mat4 u_View_Projection_Matrix;
 void main ()
 {
     gl_Position = u_View_Projection_Matrix * vec4 (a_Position, 1);
-    Normal      = a_Normal;
-    Tex_Coords  = a_Tex_Coords;
+
+    if (a_Face == 0)
+        Normal = vec3 ( 1, 0, 0);
+    else if (a_Face == 1)
+        Normal = vec3 (-1, 0, 0);
+    else if (a_Face == 2)
+        Normal = vec3 (0,  1, 0);
+    else if (a_Face == 3)
+        Normal = vec3 (0, -1, 0);
+    else if (a_Face == 4)
+        Normal = vec3 (0, 0,  1);
+    else if (a_Face == 5)
+        Normal = vec3 (0, 0, -1);
 }
 )""";
 

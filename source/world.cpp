@@ -20,10 +20,7 @@ void chunk_init (Chunk *chunk, s64 x, s64 y, s64 z)
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), cast (void *) offsetof (Vertex, position));
 
     glEnableVertexAttribArray (1);
-    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), cast (void *) offsetof (Vertex, normal));
-
-    glEnableVertexAttribArray (2);
-    glVertexAttribPointer (2, 2, GL_FLOAT, GL_FALSE, sizeof (Vertex), cast (void *) offsetof (Vertex, tex_coords));
+    glVertexAttribIPointer (1, 1, GL_UNSIGNED_BYTE, sizeof (Vertex), cast (void *) offsetof (Vertex, face));
 
     glBindVertexArray (0);
     glBindBuffer (GL_ARRAY_BUFFER, 0);
@@ -132,142 +129,131 @@ void chunk_generate (Chunk *chunk)
     }
 }
 
-typedef int Block_Face_Flags;
-enum
-{
-    Block_Face_East  = 0x01, // +X
-    Block_Face_West  = 0x02, // -X
-    Block_Face_Above = 0x04, // +Y
-    Block_Face_Below = 0x08, // -Y
-    Block_Face_North = 0x10, // +Z
-    Block_Face_South = 0x20, // -Z
-};
-
 void push_block (Array<Vertex> *vertices, const Vec3f &position, Block_Face_Flags visible_faces)
 {
-    if (visible_faces & Block_Face_East)
+    if (visible_faces & Block_Face_Flag_East)
     {
-        auto v = array_push (vertices, {position, {1, 0, 0}});
+        auto v = array_push (vertices, {position, Block_Face_East});
         v->position += {0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_East});
         v->position += {0.5, 0.5, -0.5};
 
-        v = array_push (vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_East});
         v->position += {0.5, 0.5, 0.5};
 
-        v = array_push (vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_East});
         v->position += {0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_East});
         v->position += {0.5, 0.5, 0.5};
 
-        v = array_push (vertices, {position, {1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_East});
         v->position += {0.5, -0.5, 0.5};
     }
 
-    if (visible_faces & Block_Face_West)
+    if (visible_faces & Block_Face_Flag_West)
     {
-        auto v = array_push (vertices, {position, {-1, 0, 0}});
+        auto v = array_push (vertices, {position, Block_Face_West});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_West});
         v->position += {-0.5, 0.5, 0.5};
 
-        v = array_push (vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_West});
         v->position += {-0.5, 0.5, -0.5};
 
-        v = array_push (vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_West});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_West});
         v->position += {-0.5, -0.5, 0.5};
 
-        v = array_push (vertices, {position, {-1, 0, 0}});
+        v = array_push (vertices, {position, Block_Face_West});
         v->position += {-0.5, 0.5, 0.5};
     }
 
-    if (visible_faces & Block_Face_Above)
+    if (visible_faces & Block_Face_Flag_Above)
     {
-        auto v = array_push (vertices, {position, {0, 1, 0}});
+        auto v = array_push (vertices, {position, Block_Face_Above});
         v->position += {-0.5, 0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, 1, 0}});
+        v = array_push (vertices, {position, Block_Face_Above});
         v->position += {0.5, 0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, 1, 0}});
+        v = array_push (vertices, {position, Block_Face_Above});
         v->position += {0.5, 0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, 1, 0}});
+        v = array_push (vertices, {position, Block_Face_Above});
         v->position += {-0.5, 0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, 1, 0}});
+        v = array_push (vertices, {position, Block_Face_Above});
         v->position += {-0.5, 0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, 1, 0}});
+        v = array_push (vertices, {position, Block_Face_Above});
         v->position += {0.5, 0.5, 0.5};
     }
 
-    if (visible_faces & Block_Face_Below)
+    if (visible_faces & Block_Face_Flag_Below)
     {
-        auto v = array_push (vertices, {position, {0, -1, 0}});
+        auto v = array_push (vertices, {position, Block_Face_Below});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, -1, 0}});
+        v = array_push (vertices, {position, Block_Face_Below});
         v->position += {0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, -1, 0}});
+        v = array_push (vertices, {position, Block_Face_Below});
         v->position += {0.5, -0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, -1, 0}});
+        v = array_push (vertices, {position, Block_Face_Below});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, -1, 0}});
+        v = array_push (vertices, {position, Block_Face_Below});
         v->position += {0.5, -0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, -1, 0}});
+        v = array_push (vertices, {position, Block_Face_Below});
         v->position += {-0.5, -0.5, 0.5};
     }
 
-    if (visible_faces & Block_Face_North)
+    if (visible_faces & Block_Face_Flag_North)
     {
-        auto v = array_push (vertices, {position, {0, 0, 1}});
+        auto v = array_push (vertices, {position, Block_Face_North});
         v->position += {-0.5, -0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, 0, 1}});
+        v = array_push (vertices, {position, Block_Face_North});
         v->position += {0.5, -0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, 0, 1}});
+        v = array_push (vertices, {position, Block_Face_North});
         v->position += {0.5, 0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, 0, 1}});
+        v = array_push (vertices, {position, Block_Face_North});
         v->position += {-0.5, -0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, 0, 1}});
+        v = array_push (vertices, {position, Block_Face_North});
         v->position += {0.5, 0.5, 0.5};
 
-        v = array_push (vertices, {position, {0, 0, 1}});
+        v = array_push (vertices, {position, Block_Face_North});
         v->position += {-0.5, 0.5, 0.5};
     }
 
-    if (visible_faces & Block_Face_South)
+    if (visible_faces & Block_Face_Flag_South)
     {
-        auto v = array_push (vertices, {position, {0, 0, -1}});
+        auto v = array_push (vertices, {position, Block_Face_South});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, Block_Face_South});
         v->position += {0.5, 0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, Block_Face_South});
         v->position += {0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, Block_Face_South});
         v->position += {-0.5, -0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, Block_Face_South});
         v->position += {-0.5, 0.5, -0.5};
 
-        v = array_push (vertices, {position, {0, 0, -1}});
+        v = array_push (vertices, {position, Block_Face_South});
         v->position += {0.5, 0.5, -0.5};
     }
 }
@@ -299,17 +285,17 @@ void chunk_generate_mesh_data (Chunk *chunk)
 
                 Block_Face_Flags visible_faces = 0;
                 if (chunk_get_block (chunk, x + 1, y, z).type == Block_Type_Air)
-                    visible_faces |= Block_Face_East;
+                    visible_faces |= Block_Face_Flag_East;
                 if (chunk_get_block (chunk, x - 1, y, z).type == Block_Type_Air)
-                    visible_faces |= Block_Face_West;
+                    visible_faces |= Block_Face_Flag_West;
                 if (chunk_get_block (chunk, x, y + 1, z).type == Block_Type_Air)
-                    visible_faces |= Block_Face_Above;
+                    visible_faces |= Block_Face_Flag_Above;
                 if (chunk_get_block (chunk, x, y - 1, z).type == Block_Type_Air)
-                    visible_faces |= Block_Face_Below;
+                    visible_faces |= Block_Face_Flag_Below;
                 if (chunk_get_block (chunk, x, y, z + 1).type == Block_Type_Air)
-                    visible_faces |= Block_Face_North;
+                    visible_faces |= Block_Face_Flag_North;
                 if (chunk_get_block (chunk, x, y, z - 1).type == Block_Type_Air)
-                    visible_faces |= Block_Face_South;
+                    visible_faces |= Block_Face_Flag_South;
 
                 push_block (&vertices, position + Vec3f{cast (f32) x, cast (f32) y, cast (f32) z}, visible_faces);
             }

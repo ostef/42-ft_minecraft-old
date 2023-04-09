@@ -52,11 +52,31 @@ struct Camera
 
 void update_flying_camera (Camera *camera);
 
+enum Block_Face : u8
+{
+    Block_Face_East  = 0,
+    Block_Face_West  = 1,
+    Block_Face_Above = 2,
+    Block_Face_Below = 3,
+    Block_Face_North = 4,
+    Block_Face_South = 4,
+};
+
+typedef int Block_Face_Flags;
+enum
+{
+    Block_Face_Flag_East  = (1 << Block_Face_East), // +X
+    Block_Face_Flag_West  = (1 << Block_Face_West), // -X
+    Block_Face_Flag_Above = (1 << Block_Face_Above), // +Y
+    Block_Face_Flag_Below = (1 << Block_Face_Below), // -Y
+    Block_Face_Flag_North = (1 << Block_Face_North), // +Z
+    Block_Face_Flag_South = (1 << Block_Face_South), // -Z
+};
+
 struct Vertex
 {
     Vec3f position;
-    Vec3f normal;
-    Vec2f tex_coords;
+    Block_Face face;
 };
 
 bool render_init ();
