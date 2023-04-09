@@ -116,7 +116,7 @@ void chunk_generate (Chunk *chunk)
                 }
                 else if (y > Surface_Level + surface * Surface_Height_Threshold - Surface_Height_Threshold)
                 {
-                    chunk->blocks[index].type = Block_Type_Stone;
+                    chunk->blocks[index].type = Block_Type_Dirt;
                 }
                 else if (y == Min_Chunk_Y * Chunk_Size)
                 {
