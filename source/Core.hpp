@@ -567,7 +567,7 @@ bool hash_map_init (
 
     if (base_capacity > 0)
     {
-        map->capacity = max (base_capacity, HASH_MAP_MIN_CAPACITY);
+        map->capacity = max (base_capacity, cast (s64) HASH_MAP_MIN_CAPACITY);
 
         s64 p = 1;
         while (map->capacity > p)
@@ -611,7 +611,7 @@ bool hash_map_grow (Hash_Map<Key, Value> *map)
     auto old_capacity = map->capacity;
     auto old_entries = map->entries;
 
-    auto new_capacity = max (map->capacity * 2, HASH_MAP_MIN_CAPACITY);
+    auto new_capacity = max (map->capacity * 2, cast (s64) HASH_MAP_MIN_CAPACITY);
     auto new_entries = map->entries = (typename Hash_Map<Key, Value>::Entry *)mem_alloc (
         sizeof (typename Hash_Map<Key, Value>::Entry) * new_capacity, map->allocator);
     if (!new_entries)
@@ -783,6 +783,17 @@ Hash_Map_Iter<Key, Value> hash_map_next (Hash_Map<Key, Value> *map, const Hash_M
 // Hash
 
 inline
+u32 hash_combine (u32 a, u32 b)
+{
+    u32 result = 0;
+    result ^= a + 0x9e3779b9 + (0 << 6) + (0 >> 2);
+    result ^= b + 0x9e3779b9 + (result << 6) + (result >> 2);
+
+    return result;
+}
+
+// FNV-1a
+inline
 u32 hash_string (const String &str)
 {
     static const u32 OFFSET_BASIS = 0x811c9dc5;
@@ -796,6 +807,27 @@ u32 hash_string (const String &str)
     }
 
     return hash;
+}
+
+// I don't know how good it is, but I just want to get things going
+// @Todo: check that this is a good hash function
+// https://burtleburtle.net/bob/hash/integer.html
+inline
+u32 hash_u32 (u32 a)
+{
+    a = (a ^ 61) ^ (a >> 16);
+    a = a + (a << 3);
+    a = a ^ (a >> 4);
+    a = a * 0x27d4eb2d;
+    a = a ^ (a >> 15);
+
+    return a;
+}
+
+inline
+u32 hash_s32 (s32 val)
+{
+    return hash_u32 (cast (u32) val);
 }
 
 // Random
