@@ -87,6 +87,12 @@ int main (int argc, const char **args)
     glEnable (GL_CULL_FACE);
     glFrontFace (GL_CW);
 
+    if (!load_texture_atlas ("data/textures"))
+    {
+        println ("Error: could not load textures");
+        return 1;
+    }
+
     if (!render_init ())
     {
         println ("Could not initialize rendering system");

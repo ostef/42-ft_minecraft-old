@@ -1,6 +1,7 @@
 #include "Minecraft.hpp"
 
 GLuint g_block_shader;
+GLuint g_texture_atlas;
 
 const char *GL_Block_Shader_Vertex = R"""(
 #version 330 core
@@ -83,6 +84,59 @@ bool render_init ()
 
         return false;
     }
+
+    return true;
+}
+
+bool load_texture_atlas (const char *textures_dirname)
+{
+    static const char *Texture_Names[] = {
+        "dirt.png",
+        "bedrock.png",
+        "stone.png",
+    };
+
+    static const int Texture_Count = array_size (Texture_Names);
+
+    int atlas_cell_size = cast (int) ceil (sqrt (Texture_Count));
+    int atlas_size = 16 * atlas_cell_size;
+    u32 *atlas_data = mem_alloc_typed (u32, atlas_size * atlas_size, heap_allocator ());
+    defer (mem_free (atlas_data, heap_allocator ()));
+
+    for_range (i, 0, Texture_Count)
+    {
+        int w, h;
+        auto data = stbi_load (fcstring (frame_allocator, "%s/%s", textures_dirname, Texture_Names[i]), &w, &h, null, 4);
+
+        if (!data)
+        {
+            println ("Error: could not load texture %s", Texture_Names[i]);
+            return false;
+        }
+
+        defer (stbi_image_free (data));
+
+        if (w != 16 || h != 16)
+        {
+            println ("Error: texture %s dimensions are invalid. All textures must be 16 by 16", Texture_Names[i]);
+            return false;
+        }
+
+        int cell_x = i % atlas_cell_size;
+        int cell_y = i / atlas_cell_size;
+
+        for_range (row, 0, 16)
+        {
+            memcpy (atlas_data + (cell_y * 16 + row) * atlas_size + cell_x, data + row * 16, 16 * 4);
+        }
+    }
+
+    glGenTextures (1, &g_texture_atlas);
+    glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, atlas_size, atlas_size, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas_data);
+    glBindTexture (GL_TEXTURE_2D, 0);
 
     return true;
 }

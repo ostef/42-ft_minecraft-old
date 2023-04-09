@@ -19,6 +19,8 @@ extern Allocator frame_allocator;
 extern Vec2f g_prev_mouse_pos;
 extern Vec2f g_mouse_delta;
 
+extern GLuint g_texture_atlas;
+
 extern GLFWwindow *g_window;
 
 struct Vertex;
@@ -30,6 +32,8 @@ struct World;
 
 f64 perlin_noise (f64 x, f64 y, f64 z);
 void show_perlin_test_window (bool *opened = null);
+
+bool load_texture_atlas (const char *texture_dirname);
 
 struct Camera
 {
