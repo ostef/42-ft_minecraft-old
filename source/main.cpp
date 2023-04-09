@@ -112,6 +112,11 @@ int main (int argc, const char **args)
 
     world_init (&g_world);
 
+    s64 chunk_generation_time = 0;
+    s64 chunk_generation_samples = 0;
+    s64 chunk_creation_time = 0;
+    s64 chunk_creation_samples = 0;
+
     bool generate_new_chunks = true;
 
     int render_distance = 5;
@@ -146,6 +151,8 @@ int main (int argc, const char **args)
 
                         if (distance (camera.position, world_chunk_pos) < render_distance * Chunk_Size)
                         {
+                            s64 time_start = time_current_monotonic ();
+
                             auto current_chunk = world_create_chunk (&g_world,
                                 cast (s64) camera.position.x / Chunk_Size + x,
                                 cast (s64) camera.position.y / Chunk_Size + y,
@@ -153,7 +160,16 @@ int main (int argc, const char **args)
                             );
 
                             if (!current_chunk->generated)
+                            {
+                                chunk_creation_time += time_current_monotonic () - time_start;
+                                chunk_creation_samples += 1;
+
                                 chunk_generate (current_chunk);
+
+                                s64 time_end = time_current_monotonic ();
+                                chunk_generation_time += time_end - time_start;
+                                chunk_generation_samples += 1;
+                            }
                         }
                     }
                 }
@@ -175,6 +191,8 @@ int main (int argc, const char **args)
                 for_array (i, g_world.all_loaded_chunks)
                     total_vertex_count += g_world.all_loaded_chunks[i]->vertices.count;
 
+                ImGui::Text ("Average chunk creation   time: %f us", chunk_creation_time / cast (f32) chunk_creation_samples);
+                ImGui::Text ("Average chunk generation time: %f us", chunk_generation_time / cast (f32) chunk_generation_samples);
                 ImGui::Text ("Loaded chunks:      %lld", g_world.all_loaded_chunks.count);
                 ImGui::Text ("Total vertex count: %lld", total_vertex_count);
                 ImGui::Checkbox ("Generate new chunks", &generate_new_chunks);
