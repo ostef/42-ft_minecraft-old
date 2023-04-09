@@ -12,7 +12,8 @@ layout (location = 1) in int a_Face;
 layout (location = 2) in int a_Block_Id;
 layout (location = 3) in int a_Block_Corner;
 
-const int Atlas_Cell_Size = 16;
+const int Atlas_Cell_Size = 18;
+const int Atlas_Cell_Size_No_Border = Atlas_Cell_Size - 2;
 
 out vec3 Normal;
 out vec2 Tex_Coords;
@@ -37,17 +38,19 @@ void main ()
     int atlas_size = textureSize (u_Texture_Atlas, 0).x / Atlas_Cell_Size;    // Assume width == height
     int atlas_cell_x = a_Block_Id % atlas_size;
     int atlas_cell_y = a_Block_Id / atlas_size;
+    int atlas_tex_x = atlas_cell_x * Atlas_Cell_Size + 1;
+    int atlas_tex_y = atlas_cell_y * Atlas_Cell_Size - 1;
 
     switch (a_Block_Corner)
     {
     case 0: break;
-    case 1: atlas_cell_x += 1; break;
-    case 2: atlas_cell_y -= 1; break;
-    case 3: atlas_cell_x += 1; atlas_cell_y -= 1; break;
+    case 1: atlas_tex_x += Atlas_Cell_Size_No_Border; break;
+    case 2: atlas_tex_y -= Atlas_Cell_Size_No_Border; break;
+    case 3: atlas_tex_x += Atlas_Cell_Size_No_Border; atlas_tex_y -= Atlas_Cell_Size_No_Border; break;
     }
 
-    Tex_Coords.x = float (atlas_cell_x) / float (atlas_size);
-    Tex_Coords.y = 1 - float (atlas_cell_y) / float (atlas_size);
+    Tex_Coords.x = float (atlas_tex_x) / float (atlas_size * Atlas_Cell_Size);
+    Tex_Coords.y = 1 - float (atlas_tex_y) / float (atlas_size * Atlas_Cell_Size);
 }
 )""";
 
@@ -118,6 +121,16 @@ bool render_init ()
     return true;
 }
 
+static const int Atlas_Cell_Size = 18;
+static const int Atlas_Cell_Size_No_Border = Atlas_Cell_Size - 2;
+
+void copy_row_into_texture_atlas (u32 *dest, u32 *src, int dest_row, int dest_x, int src_row, int src_width)
+{
+    dest[dest_row * g_texture_atlas_size + dest_x] = src[src_row * src_width];
+    memcpy (dest + dest_row * g_texture_atlas_size + dest_x + 1, src + src_row * src_width, src_width * sizeof (s32));
+    dest[dest_row * g_texture_atlas_size + dest_x + Atlas_Cell_Size - 1] = src[src_row * src_width + src_width - 1];
+}
+
 bool load_texture_atlas (const char *textures_dirname)
 {
     static const char *Texture_Names[] = {
@@ -128,8 +141,10 @@ bool load_texture_atlas (const char *textures_dirname)
 
     static const int Texture_Count = array_size (Texture_Names);
 
-    int atlas_cell_size = cast (int) ceil (sqrt (Texture_Count + 1));
-    g_texture_atlas_size = 16 * atlas_cell_size;
+    int atlas_cell_count = cast (int) ceil (sqrt (Texture_Count + 1));
+    // We add 2 pixels to apply a border to prevent seams from appearing
+    // when we render the textured blocks
+    g_texture_atlas_size = Atlas_Cell_Size * atlas_cell_count;
     u32 *atlas_data = mem_alloc_typed (u32, g_texture_atlas_size * g_texture_atlas_size, heap_allocator ());
     defer (mem_free (atlas_data, heap_allocator ()));
 
@@ -146,25 +161,29 @@ bool load_texture_atlas (const char *textures_dirname)
 
         defer (stbi_image_free (data));
 
-        if (w != 16 || h != 16)
+        if (w != Atlas_Cell_Size_No_Border || h != Atlas_Cell_Size_No_Border)
         {
-            println ("Error: texture %s dimensions are invalid. All textures must be 16 by 16", Texture_Names[i]);
+            println ("Error: texture %s dimensions are invalid. All textures must be %d by %d", Texture_Names[i], Atlas_Cell_Size_No_Border, Atlas_Cell_Size_No_Border);
             return false;
         }
 
         int block_id = i + 1;   // Leave one for air
-        int cell_x = block_id % atlas_cell_size;
-        int cell_y = block_id / atlas_cell_size;
+        int cell_x = block_id % atlas_cell_count;
+        int cell_y = block_id / atlas_cell_count;
+        int tex_x = cell_x * Atlas_Cell_Size;
+        int tex_y = cell_y * Atlas_Cell_Size;
 
-        for_range (row, 0, 16)
-        {
-            memcpy (atlas_data + (cell_y * 16 + row) * g_texture_atlas_size + cell_x * 16, data + row * 16, 16 * sizeof (s32));
-        }
+        copy_row_into_texture_atlas (atlas_data, data, tex_y, tex_x, 0, w);
+
+        for_range (row, 0, h)
+            copy_row_into_texture_atlas (atlas_data, data, tex_y + 1 + row, tex_x, row, w);
+
+        copy_row_into_texture_atlas (atlas_data, data, tex_y + Atlas_Cell_Size - 1, tex_x, h - 1, w);
     }
 
     glGenTextures (1, &g_texture_atlas);
     glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, g_texture_atlas_size, g_texture_atlas_size, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas_data);
     glBindTexture (GL_TEXTURE_2D, 0);
