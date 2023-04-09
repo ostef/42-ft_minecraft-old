@@ -65,7 +65,7 @@ void draw_chunk (Chunk *chunk, Camera *camera);
 enum Block_Type : u8
 {
     Block_Type_Air = 0,
-    Block_Type_Grass,
+    Block_Type_Dirt,
     Block_Type_Stone,
     Block_Type_Bedrock,
 
