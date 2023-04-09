@@ -11,6 +11,8 @@
 #define IM_ASSERT assert
 #include "ImGui.hpp"
 
+#include <stb_image.h>
+
 extern Arena     frame_arena;
 extern Allocator frame_allocator;
 

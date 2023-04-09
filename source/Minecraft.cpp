@@ -4,3 +4,6 @@
 #include "render.cpp"
 #include "world.cpp"
 #include "main.cpp"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
