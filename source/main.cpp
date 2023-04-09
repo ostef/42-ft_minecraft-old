@@ -120,6 +120,7 @@ int main (int argc, const char **args)
     bool generate_new_chunks = true;
 
     int render_distance = 5;
+    int generation_height = 2;
 
     bool show_demo_window = false;
     bool show_perlin_test = false;
@@ -142,14 +143,15 @@ int main (int argc, const char **args)
         {
             for_range (x, -render_distance, render_distance)
             {
-                for_range (y, -render_distance, render_distance)
+                for_range (y, -generation_height, generation_height)
                 {
                     for_range (z, -render_distance, render_distance)
                     {
-                        Vec3f world_chunk_pos = {cast (f32) x * Chunk_Size, cast (f32) y * Chunk_Size, cast (f32) z * Chunk_Size};
-                        world_chunk_pos += camera.position;
+                        Vec2f planar_camera_pos = Vec2f{camera.position.x, camera.position.z};
+                        Vec2f planar_chunk_pos = Vec2f{cast (f32) x * Chunk_Size, cast (f32) z * Chunk_Size};
+                        planar_chunk_pos += planar_camera_pos;
 
-                        if (distance (camera.position, world_chunk_pos) < render_distance * Chunk_Size)
+                        if (distance (planar_camera_pos, planar_chunk_pos) < render_distance * Chunk_Size)
                         {
                             s64 time_start = time_current_monotonic ();
 
