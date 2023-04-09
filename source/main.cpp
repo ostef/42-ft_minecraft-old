@@ -196,25 +196,7 @@ int main (int argc, const char **args)
         glViewport (0, 0, width, height);
         glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        g_drawn_vertex_count = 0;
-        for_hash_map (it, g_world.all_loaded_chunks)
-        {
-            for_range (i, 0, Max_Chunk_Y - Min_Chunk_Y)
-            {
-                auto chunk = (*it.value)[i];
-                if (!chunk)
-                    continue;
-
-                Vec3f world_chunk_pos = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->y * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
-
-                if (distance (world_chunk_pos, g_camera.position) < cast (f64) g_render_distance * Chunk_Size)
-                {
-                    chunk_generate_mesh_data (chunk);
-                    draw_chunk (chunk, &g_camera);
-                    g_drawn_vertex_count += chunk->vertex_count;
-                }
-            }
-        }
+        world_draw_chunks (&g_world, &g_camera);
 
         ImGui::Render ();
         ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());

@@ -154,9 +154,11 @@ Block chunk_get_block_in_chunk (Chunk *chunk, s64 x, s64 y, s64 z);
 Block chunk_get_block (Chunk *chunk, s64 x, s64 y, s64 z);
 void chunk_generate (Chunk *chunk);
 void chunk_generate_mesh_data (Chunk *chunk);
+void chunk_draw (Chunk *chunk, Camera *camera);
 
 void world_init (World *world, int chunks_to_pre_generate = 0);
 Chunk_Column *world_get_chunk_column (World *world, s64 x, s64 z);
 Chunk *world_get_chunk (World *world, s64 x, s64 y, s64 z);
 Chunk *world_create_chunk (World *world, s64 x, s64 y, s64 z);
 Chunk *world_generate_chunk (World *world, s64 x, s64 y, s64 z);
+void world_draw_chunks (World *world, Camera *camera);

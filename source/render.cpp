@@ -191,14 +191,10 @@ void update_flying_camera (Camera *camera)
     camera->view_projection_matrix = camera->projection_matrix * camera->view_matrix;
 }
 
-void draw_chunk (Chunk *chunk, Camera *camera)
+void chunk_draw (Chunk *chunk, Camera *camera)
 {
     if (chunk->vertex_count == 0)
         return;
-
-    glUseProgram (g_block_shader);
-    auto loc = glGetUniformLocation (g_block_shader, "u_View_Projection_Matrix");
-    glUniformMatrix4fv (loc, 1, GL_TRUE, camera->view_projection_matrix.comps);
 
     glBindVertexArray (chunk->opengl_is_stupid_vao);
     glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
@@ -207,4 +203,38 @@ void draw_chunk (Chunk *chunk, Camera *camera)
 
     glBindBuffer (GL_ARRAY_BUFFER, 0);
     glBindVertexArray (0);
+}
+
+void world_draw_chunks (World *world, Camera *camera)
+{
+    glActiveTexture (0);
+    glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
+
+    glUseProgram (g_block_shader);
+
+    auto loc = glGetUniformLocation (g_block_shader, "u_View_Projection_Matrix");
+    glUniformMatrix4fv (loc, 1, GL_TRUE, camera->view_projection_matrix.comps);
+
+    loc = glGetUniformLocation (g_block_shader, "u_Texture_Atlas");
+    glUniform1i (loc, 0);
+
+    g_drawn_vertex_count = 0;
+    for_hash_map (it, world->all_loaded_chunks)
+    {
+        for_range (i, 0, Max_Chunk_Y - Min_Chunk_Y)
+        {
+            auto chunk = (*it.value)[i];
+            if (!chunk)
+                continue;
+
+            Vec3f world_chunk_pos = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->y * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
+
+            if (distance (world_chunk_pos, camera->position) < cast (f64) g_render_distance * Chunk_Size)
+            {
+                chunk_generate_mesh_data (chunk);
+                chunk_draw (chunk, &g_camera);
+                g_drawn_vertex_count += chunk->vertex_count;
+            }
+        }
+    }
 }
