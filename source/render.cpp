@@ -18,18 +18,15 @@ void main ()
 {
     gl_Position = u_View_Projection_Matrix * vec4 (a_Position, 1);
 
-    if (a_Face == 0)
-        Normal = vec3 ( 1, 0, 0);
-    else if (a_Face == 1)
-        Normal = vec3 (-1, 0, 0);
-    else if (a_Face == 2)
-        Normal = vec3 (0,  1, 0);
-    else if (a_Face == 3)
-        Normal = vec3 (0, -1, 0);
-    else if (a_Face == 4)
-        Normal = vec3 (0, 0,  1);
-    else if (a_Face == 5)
-        Normal = vec3 (0, 0, -1);
+    switch (a_Face)
+    {
+    case 0: Normal = vec3 ( 1, 0, 0); break;
+    case 1: Normal = vec3 (-1, 0, 0); break;
+    case 2: Normal = vec3 (0,  1, 0); break;
+    case 3: Normal = vec3 (0, -1, 0); break;
+    case 4: Normal = vec3 (0, 0,  1); break;
+    case 5: Normal = vec3 (0, 0, -1); break;
+    }
 }
 )""";
 
