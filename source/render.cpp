@@ -2,6 +2,7 @@
 
 GLuint g_block_shader;
 GLuint g_texture_atlas;
+s64 g_texture_atlas_size;
 
 const char *GL_Block_Shader_Vertex = R"""(
 #version 330 core
@@ -106,14 +107,14 @@ bool load_texture_atlas (const char *textures_dirname)
     static const int Texture_Count = array_size (Texture_Names);
 
     int atlas_cell_size = cast (int) ceil (sqrt (Texture_Count));
-    int atlas_size = 16 * atlas_cell_size;
-    u32 *atlas_data = mem_alloc_typed (u32, atlas_size * atlas_size, heap_allocator ());
+    g_texture_atlas_size = 16 * atlas_cell_size;
+    u32 *atlas_data = mem_alloc_typed (u32, g_texture_atlas_size * g_texture_atlas_size, heap_allocator ());
     defer (mem_free (atlas_data, heap_allocator ()));
 
     for_range (i, 0, Texture_Count)
     {
         int w, h;
-        auto data = stbi_load (fcstring (frame_allocator, "%s/%s", textures_dirname, Texture_Names[i]), &w, &h, null, 4);
+        auto data = cast (u32 *) stbi_load (fcstring (frame_allocator, "%s/%s", textures_dirname, Texture_Names[i]), &w, &h, null, 4);
 
         if (!data)
         {
@@ -134,7 +135,7 @@ bool load_texture_atlas (const char *textures_dirname)
 
         for_range (row, 0, 16)
         {
-            memcpy (atlas_data + (cell_y * 16 + row) * atlas_size + cell_x, data + row * 16, 16 * 4);
+            memcpy (atlas_data + (cell_y * 16 + row) * g_texture_atlas_size + cell_x * 16, data + row * 16, 16 * sizeof (s32));
         }
     }
 
@@ -142,7 +143,7 @@ bool load_texture_atlas (const char *textures_dirname)
     glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, atlas_size, atlas_size, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas_data);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, g_texture_atlas_size, g_texture_atlas_size, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas_data);
     glBindTexture (GL_TEXTURE_2D, 0);
 
     return true;

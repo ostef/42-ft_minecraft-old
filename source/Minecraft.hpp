@@ -20,8 +20,20 @@ extern Vec2f g_prev_mouse_pos;
 extern Vec2f g_mouse_delta;
 
 extern GLuint g_texture_atlas;
+extern s64 g_texture_atlas_size;
 
 extern GLFWwindow *g_window;
+
+extern s64 g_chunk_generation_time;
+extern s64 g_chunk_generation_samples;
+extern s64 g_chunk_creation_time;
+extern s64 g_chunk_creation_samples;
+extern s64 g_drawn_vertex_count;
+
+extern bool g_generate_new_chunks;
+
+extern int g_render_distance;
+extern int g_generation_height;
 
 struct Vertex;
 struct Camera;
@@ -49,6 +61,8 @@ struct Camera
     Mat4f projection_matrix;
     Mat4f view_projection_matrix;
 };
+
+extern Camera g_camera;
 
 void update_flying_camera (Camera *camera);
 
