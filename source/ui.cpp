@@ -18,9 +18,9 @@ void ui_show_perlin_test_window (bool *opened)
     static bool perlin_2d = true;
     static Vec2f offsets_2d[Max_Octaves];
     static Vec3f offsets_3d[Max_Octaves];
-    static int octaves = 5;
-    static f32 lacunarity = 0.5;
-    static f32 persistance = 1;
+    static int octaves = 3;
+    static f32 lacunarity = 1;
+    static f32 persistance = 0.5;
 
     if (ImGui::Begin ("Perlin Test", opened))
     {
@@ -48,7 +48,7 @@ void ui_show_perlin_test_window (bool *opened)
             should_generate = true;
         if (ImGui::SliderFloat ("Persistance", &persistance, 0.001, 1))
             should_generate = true;
-        if (ImGui::SliderFloat ("Lacunarity", &lacunarity, 1, 100))
+        if (ImGui::SliderFloat ("Lacunarity", &lacunarity, 1, 10))
             should_generate = true;
 
         if (!perlin_2d)
@@ -100,7 +100,7 @@ void ui_show_perlin_test_window (bool *opened)
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             }
 
-            auto max_value = perlin_fractal_max_amplitude (octaves, persistance);
+            auto max_value = perlin_fractal_max (octaves, persistance);
             for_range (i, 0, texture_size)
             {
                 for_range (j, 0, texture_size)

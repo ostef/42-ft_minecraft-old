@@ -172,7 +172,7 @@ f64 perlin_noise (f64 x, f64 y, f64 z)
 }
 
 inline
-f64 perlin_fractal_max_amplitude (int octaves, f64 persistance)
+f64 perlin_fractal_max (int octaves, f64 persistance)
 {
     f64 result = 0;
     f64 amplitude = 1;

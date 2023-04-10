@@ -45,7 +45,7 @@ struct World;
 
 f64 perlin_noise (f64 x, f64 y);
 f64 perlin_noise (f64 x, f64 y, f64 z);
-f64 perlin_fractal_max_amplitude (int octaves, f64 persistance);
+f64 perlin_fractal_max (int octaves, f64 persistance);
 f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistance, f64 lacunarity, f64 x, f64 y);
 f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistance, f64 lacunarity, f64 x, f64 y, f64 z);
 
