@@ -170,3 +170,56 @@ f64 perlin_noise (f64 x, f64 y, f64 z)
 
 #undef P
 }
+
+inline
+f64 perlin_fractal_max_amplitude (int octaves, f64 persistance)
+{
+    f64 result = 0;
+    f64 amplitude = 1;
+    for_range (i, 0, octaves)
+    {
+        result += amplitude;
+        amplitude *= persistance;
+    }
+
+    return result;
+}
+
+inline
+f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistance, f64 lacunarity, f64 x, f64 y)
+{
+    f64 result = 0;
+    f64 amplitude = 1;
+    f64 frequency = 1;
+    for_range (i, 0, octaves)
+    {
+        result += perlin_noise (
+            x * scale * frequency + offsets[i].x,
+            y * scale * frequency + offsets[i].y
+        ) * amplitude;
+        amplitude *= persistance;
+        frequency *= lacunarity;
+    }
+
+    return result;
+}
+
+inline
+f64 perlin_fractal_noise (f64 scale, int octaves, Vec3f *offsets, f64 persistance, f64 lacunarity, f64 x, f64 y, f64 z)
+{
+    f64 result = 0;
+    f64 amplitude = 1;
+    f64 frequency = 1;
+    for_range (i, 0, octaves)
+    {
+        result += perlin_noise (
+            x * scale * frequency + offsets[i].x,
+            y * scale * frequency + offsets[i].y,
+            z * scale * frequency + offsets[i].z
+        ) * amplitude;
+        amplitude *= persistance;
+        frequency *= lacunarity;
+    }
+
+    return result;
+}

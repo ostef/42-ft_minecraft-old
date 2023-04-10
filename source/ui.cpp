@@ -7,19 +7,25 @@ static bool g_show_texture_atlas_window;
 
 void ui_show_perlin_test_window (bool *opened)
 {
-    static f32 scale = 0.1;
+    static const int Max_Octaves = 6;
+
+    static f32 scale = 0.05;
     static GLuint texture_handle;
     static u32 *texture_buffer;
     static int texture_size;
     static int ui_texture_size = 256;
-    static Vec2i offset = {-2, -2};
     static f32 z;
     static bool perlin_2d = true;
+    static Vec2f offsets_2d[Max_Octaves];
+    static Vec3f offsets_3d[Max_Octaves];
+    static int octaves = 5;
+    static f32 lacunarity = 0.5;
+    static f32 persistance = 1;
 
     if (ImGui::Begin ("Perlin Test", opened))
     {
         {
-            int lines = perlin_2d ? 4 : 5;
+            int lines = perlin_2d ? 7 : 8;
             auto child_height = ImGui::GetContentRegionAvail ().y - lines * ImGui::GetFrameHeightWithSpacing ();
             if (ImGui::BeginChild ("Image", {0, child_height}, true, ImGuiWindowFlags_HorizontalScrollbar))
             {
@@ -29,10 +35,21 @@ void ui_show_perlin_test_window (bool *opened)
             ImGui::EndChild ();
         }
 
-        ImGui::SliderInt ("Size", &ui_texture_size, 128, 4096);
-        ImGui::SliderFloat ("Scale", &scale, 0.001, 1);
-
         bool should_generate = false;
+
+        if (!texture_buffer)
+            should_generate = true;
+
+        if (ImGui::SliderInt ("Size", &ui_texture_size, 128, 4096))
+            should_generate = true;
+        if (ImGui::SliderFloat ("Scale", &scale, 0.001, 1))
+            should_generate = true;
+        if (ImGui::SliderInt ("Octaves", &octaves, 1, Max_Octaves))
+            should_generate = true;
+        if (ImGui::SliderFloat ("Persistance", &persistance, 0.001, 1))
+            should_generate = true;
+        if (ImGui::SliderFloat ("Lacunarity", &lacunarity, 1, 100))
+            should_generate = true;
 
         if (!perlin_2d)
         {
@@ -40,19 +57,26 @@ void ui_show_perlin_test_window (bool *opened)
                 should_generate = true;
         }
 
-        ImGui::Checkbox ("2D Noise", &perlin_2d);
+        if (ImGui::Checkbox ("2D Noise", &perlin_2d))
+            should_generate = true;
 
         if (ImGui::Button ("Generate"))
-        {
             should_generate = true;
-        }
 
         ImGui::SameLine ();
 
         if (ImGui::Button ("Randomize"))
         {
-            offset.x = cast (int) random_get ();
-            offset.y = cast (int) random_get ();
+            for_range (i, 0, Max_Octaves)
+            {
+                offsets_2d[i].x = random_rangef (-10000, 10000);
+                offsets_2d[i].y = random_rangef (-10000, 10000);
+
+                offsets_3d[i].x = offsets_2d[i].x;
+                offsets_3d[i].y = offsets_2d[i].y;
+                offsets_3d[i].z = random_rangef (-10000, 10000);
+            }
+
             should_generate = true;
         }
 
@@ -61,6 +85,7 @@ void ui_show_perlin_test_window (bool *opened)
             if (texture_size != ui_texture_size || !texture_buffer)
             {
                 texture_size = ui_texture_size;
+
                 mem_free (texture_buffer, heap_allocator ());
                 texture_buffer = mem_alloc_uninit (u32, texture_size * texture_size, heap_allocator ());
                 assert (texture_buffer != null);
@@ -75,6 +100,7 @@ void ui_show_perlin_test_window (bool *opened)
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             }
 
+            auto max_value = perlin_fractal_max_amplitude (octaves, persistance);
             for_range (i, 0, texture_size)
             {
                 for_range (j, 0, texture_size)
@@ -82,11 +108,14 @@ void ui_show_perlin_test_window (bool *opened)
                     f64 value;
 
                     if (perlin_2d)
-                        value = perlin_noise (cast (f64) (i + offset.x) * scale, cast (f64) (j + offset.y) * scale);
+                        value = perlin_fractal_noise (scale, octaves, offsets_2d, persistance, lacunarity,
+                            cast (f64) i, cast (f64) j);
                     else
-                        value = perlin_noise (cast (f64) (i + offset.x) * scale, cast (f64) (j + offset.y) * scale, z);
+                        value = perlin_fractal_noise (scale, octaves, offsets_3d, persistance, lacunarity,
+                            cast (f64) i, cast (f64) j, z);
 
-                    value = (value + 1) * 0.5;
+                    value = inverse_lerp (-max_value, max_value, value);
+
                     u8 color_comp = cast (u8) (value * 255);
                     texture_buffer[i * texture_size + j] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
                 }
