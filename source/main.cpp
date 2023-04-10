@@ -157,7 +157,7 @@ int main (int argc, const char **args)
     Vec3f camera_position {};
     Vec3f camera_direction {};
 
-    g_camera.position.y = 80;
+    g_camera.position.y = cast (f32) (Surface_Level + Surface_Height_Threshold + 5);
     g_camera.fov = 60;
     g_camera.rotation = {};
     g_camera.transform = {};

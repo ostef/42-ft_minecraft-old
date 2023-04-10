@@ -116,7 +116,7 @@ void chunk_generate (World *world, Chunk *chunk)
 
                 s64 index = i * Chunk_Size * Chunk_Size + j * Chunk_Size + k;
 
-                auto surface = perlin_noise (perlin_x * Surface_Scale, 0, perlin_z * Surface_Scale);
+                auto surface = perlin_noise (perlin_x * Surface_Scale, perlin_z * Surface_Scale);
                 surface = (surface + 1) * 0.5;
 
                 if (y > Surface_Level + surface * Surface_Height_Threshold)
