@@ -190,48 +190,6 @@ bool load_texture_atlas (const char *textures_dirname)
     return true;
 }
 
-void update_flying_camera (Camera *camera)
-{
-    Vec2f mouse_delta = {};
-    Vec3f move_input = {};
-    f32 move_speed = 0;
-
-    if (glfwGetWindowAttrib (g_window, GLFW_FOCUSED))
-    {
-        move_speed = 0.1;
-        if (glfwGetKey (g_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-            move_speed *= 10;
-        mouse_delta = g_mouse_delta;
-        move_input.x = cast (f32) (glfwGetKey (g_window, GLFW_KEY_D) == GLFW_PRESS)
-            - cast (f32) (glfwGetKey (g_window, GLFW_KEY_A) == GLFW_PRESS);
-        move_input.z = cast (f32) (glfwGetKey (g_window, GLFW_KEY_W) == GLFW_PRESS)
-            - cast (f32) (glfwGetKey (g_window, GLFW_KEY_S) == GLFW_PRESS);
-        move_input.y = cast (f32) (glfwGetKey (g_window, GLFW_KEY_E) == GLFW_PRESS)
-            - cast (f32) (glfwGetKey (g_window, GLFW_KEY_Q) == GLFW_PRESS);
-    }
-
-    move_input = normalized (move_input);
-    camera->position += right_vector (camera->transform) * move_input.x * move_speed
-        + forward_vector (camera->transform) * move_input.y * move_speed
-        + up_vector (camera->transform) * move_input.z * move_speed;
-
-    camera->rotation_input = lerp (camera->rotation_input, mouse_delta, 0.3);
-    auto delta = camera->rotation_input * 0.3f;
-    camera->euler_angles.yaw   += to_rads (delta.x);
-    camera->euler_angles.pitch += to_rads (delta.y);
-    camera->euler_angles.pitch = clamp (camera->euler_angles.pitch, to_rads (-80.0f), to_rads (80.0f));
-    camera->rotation = quat_from_euler_angles<f32> (camera->euler_angles);
-
-    camera->transform = mat4_transform<f32> (camera->position, camera->rotation);
-    camera->view_matrix = inverse (camera->transform);
-
-    int viewport_w, viewport_h;
-    glfwGetFramebufferSize (g_window, &viewport_w, &viewport_h);
-    f32 aspect_ratio = viewport_w / cast (f32) viewport_h;
-    camera->projection_matrix = mat4_perspective_projection<f32> (camera->fov, aspect_ratio, 0.01, 1000.0);
-    camera->view_projection_matrix = camera->projection_matrix * camera->view_matrix;
-}
-
 void chunk_draw (Chunk *chunk, Camera *camera)
 {
     if (chunk->vertex_count == 0)

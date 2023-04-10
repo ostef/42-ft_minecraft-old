@@ -17,15 +17,58 @@ s64 g_chunk_generation_samples = 0;
 s64 g_chunk_creation_time = 0;
 s64 g_chunk_creation_samples = 0;
 s64 g_drawn_vertex_count = 0;
+s64 g_delta_time = 0;
 
 bool g_generate_new_chunks = true;
 
-int g_render_distance = 5;
+int g_render_distance = 7;
 int g_generation_height = 2;
 
 void glfw_error_callback (int error, const char *description)
 {
     println ("GLFW Error (%d): %s", error, description);
+}
+
+void update_flying_camera (Camera *camera)
+{
+    Vec2f mouse_delta = {};
+    Vec3f move_input = {};
+    f32 move_speed = 0;
+
+    if (glfwGetWindowAttrib (g_window, GLFW_FOCUSED))
+    {
+        move_speed = 0.1;
+        if (glfwGetKey (g_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            move_speed *= 10;
+        mouse_delta = g_mouse_delta;
+        move_input.x = cast (f32) (glfwGetKey (g_window, GLFW_KEY_D) == GLFW_PRESS)
+            - cast (f32) (glfwGetKey (g_window, GLFW_KEY_A) == GLFW_PRESS);
+        move_input.y = cast (f32) (glfwGetKey (g_window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            - cast (f32) (glfwGetKey (g_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS);
+        move_input.z = cast (f32) (glfwGetKey (g_window, GLFW_KEY_W) == GLFW_PRESS)
+            - cast (f32) (glfwGetKey (g_window, GLFW_KEY_S) == GLFW_PRESS);
+    }
+
+    move_input = normalized (move_input);
+    camera->position += right_vector (camera->transform) * move_input.x * move_speed
+        + forward_vector (camera->transform) * move_input.y * move_speed
+        + up_vector (camera->transform) * move_input.z * move_speed;
+
+    camera->rotation_input = lerp (camera->rotation_input, mouse_delta, 0.3);
+    auto delta = camera->rotation_input * 0.3f;
+    camera->euler_angles.yaw   += to_rads (delta.x);
+    camera->euler_angles.pitch += to_rads (delta.y);
+    camera->euler_angles.pitch = clamp (camera->euler_angles.pitch, to_rads (-80.0f), to_rads (80.0f));
+    camera->rotation = quat_from_euler_angles<f32> (camera->euler_angles);
+
+    camera->transform = mat4_transform<f32> (camera->position, camera->rotation);
+    camera->view_matrix = inverse (camera->transform);
+
+    int viewport_w, viewport_h;
+    glfwGetFramebufferSize (g_window, &viewport_w, &viewport_h);
+    f32 aspect_ratio = viewport_w / cast (f32) viewport_h;
+    camera->projection_matrix = mat4_perspective_projection<f32> (camera->fov, aspect_ratio, 0.01, 1000.0);
+    camera->view_projection_matrix = camera->projection_matrix * camera->view_matrix;
 }
 
 int main (int argc, const char **args)
@@ -132,6 +175,8 @@ int main (int argc, const char **args)
 
     while (!glfwWindowShouldClose (g_window))
     {
+        s64 frame_start = time_current_monotonic ();
+
         arena_reset (&frame_arena);
 
         glfwPollEvents ();
@@ -202,6 +247,8 @@ int main (int argc, const char **args)
         ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());
 
         glfwSwapBuffers (g_window);
+
+        g_delta_time = time_current_monotonic () - frame_start;
     }
 
     return 0;

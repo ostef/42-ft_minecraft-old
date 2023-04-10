@@ -102,6 +102,7 @@ void ui_show_metrics_and_settings_window (bool *opened)
             }
         }
 
+        ImGui::Text ("Frame time: %.2f ms, %.2f FPS", g_delta_time / 1000.0, 1000000.0 / g_delta_time);
         ImGui::Text ("Position: %.2f %.2f %.2f", g_camera.position.x, g_camera.position.y, g_camera.position.z);
         ImGui::Text ("Average chunk creation   time: %f us", g_chunk_creation_time / cast (f32) g_chunk_creation_samples);
         ImGui::Text ("Average chunk generation time: %f us", g_chunk_generation_time / cast (f32) g_chunk_generation_samples);

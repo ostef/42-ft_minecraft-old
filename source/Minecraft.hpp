@@ -29,6 +29,7 @@ extern s64 g_chunk_generation_samples;
 extern s64 g_chunk_creation_time;
 extern s64 g_chunk_creation_samples;
 extern s64 g_drawn_vertex_count;
+extern s64 g_delta_time;    // In micro seconds
 
 extern bool g_generate_new_chunks;
 
