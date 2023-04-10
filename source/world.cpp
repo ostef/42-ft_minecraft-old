@@ -83,15 +83,21 @@ Block chunk_get_block (Chunk *chunk, s64 x, s64 y, s64 z)
     return chunk_get_block_in_chunk (chunk, x, y, z);
 }
 
-void chunk_generate (Chunk *chunk)
-{
-    static const f64 Surface_Scale = 0.0172;
-    static const f64 Surface_Height_Threshold = 8;
-    static const f64 Surface_Level = 64;
-    static const f64 Cavern_Scale = 0.05674;
+static const f64 Surface_Scale = 0.0172;
+static const f64 Surface_Height_Threshold = 8;
+static const f64 Surface_Level = 64;
+static const f64 Cavern_Scale = 0.05674;
 
+void chunk_generate (World *world, Chunk *chunk)
+{
     if (chunk->generated)
         return;
+
+    LC_RNG rng;
+    random_seed (&rng, world->seed);
+    f64 offset_x = cast (f64) random_get (&rng);
+    f64 offset_y = cast (f64) random_get (&rng);
+    f64 offset_z = cast (f64) random_get (&rng);
 
     defer (chunk->generated = true);
 
@@ -104,10 +110,13 @@ void chunk_generate (Chunk *chunk)
                 f64 x = cast (f64) (chunk->x * Chunk_Size + i);
                 f64 y = cast (f64) (chunk->y * Chunk_Size + j);
                 f64 z = cast (f64) (chunk->z * Chunk_Size + k);
+                f64 perlin_x = x + offset_x;
+                f64 perlin_y = y + offset_y;
+                f64 perlin_z = z + offset_z;
 
                 s64 index = i * Chunk_Size * Chunk_Size + j * Chunk_Size + k;
 
-                auto surface = perlin_noise (x * Surface_Scale, 0, z * Surface_Scale);
+                auto surface = perlin_noise (perlin_x * Surface_Scale, 0, perlin_z * Surface_Scale);
                 surface = (surface + 1) * 0.5;
 
                 if (y > Surface_Level + surface * Surface_Height_Threshold)
@@ -124,7 +133,7 @@ void chunk_generate (Chunk *chunk)
                 }
                 else
                 {
-                    auto val = perlin_noise (x * Cavern_Scale, y * Cavern_Scale, z * Cavern_Scale);
+                    auto val = perlin_noise (perlin_x * Cavern_Scale, perlin_y * Cavern_Scale, perlin_z * Cavern_Scale);
                     if (val < 0.2)
                         chunk->blocks[index].type = Block_Type_Air;
                     else
@@ -137,7 +146,6 @@ void chunk_generate (Chunk *chunk)
 
 void push_block (Array<Vertex> *vertices, u8 id, const Vec3f &position, Block_Face_Flags visible_faces)
 {
-
     if (visible_faces & Block_Face_Flag_East)
     {
         auto v = array_push (vertices, {position, Block_Face_East, id, Block_Corner_Bottom_Left});
@@ -328,12 +336,16 @@ bool compare_vec2i (const Vec2i &a, const Vec2i &b)
     return a == b;
 }
 
-void world_init (World *world, int chunks_to_pre_generate)
+void world_init (World *world, s32 seed, int chunks_to_pre_generate)
 {
+    memset (world, 0, sizeof (World));
+
+    world->seed = seed;
+
     hash_map_init (&world->all_loaded_chunks, hash_vec2i, compare_vec2i, heap_allocator ());
 
     world->origin_chunk = world_create_chunk (world, 0, 0, 0);
-    chunk_generate (world->origin_chunk);
+    chunk_generate (world, world->origin_chunk);
 
     for_range (i, -chunks_to_pre_generate, chunks_to_pre_generate)
     {
@@ -342,10 +354,12 @@ void world_init (World *world, int chunks_to_pre_generate)
             for_range (k, -chunks_to_pre_generate, chunks_to_pre_generate)
             {
                 auto chunk = world_create_chunk (world, i, j, k);
-                chunk_generate (chunk);
+                chunk_generate (world, chunk);
             }
         }
     }
+
+    println ("[WORLD] Created world with seed %d", seed);
 }
 
 Chunk_Column *world_get_chunk_column (World *world, s64 x, s64 z)

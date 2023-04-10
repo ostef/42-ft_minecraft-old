@@ -171,7 +171,7 @@ int main (int argc, const char **args)
         g_curr_mouse_pos = {cast (f32) mx, cast (f32) my};
     }
 
-    world_init (&g_world);
+    world_init (&g_world, cast (s32) time_current_monotonic ());
 
     while (!glfwWindowShouldClose (g_window))
     {
@@ -218,7 +218,7 @@ int main (int argc, const char **args)
                                 g_chunk_creation_time += time_current_monotonic () - time_start;
                                 g_chunk_creation_samples += 1;
 
-                                chunk_generate (current_chunk);
+                                chunk_generate (&g_world, current_chunk);
 
                                 s64 time_end = time_current_monotonic ();
                                 g_chunk_generation_time += time_end - time_start;
