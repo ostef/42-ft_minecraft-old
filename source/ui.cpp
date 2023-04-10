@@ -14,11 +14,13 @@ void ui_show_perlin_test_window (bool *opened)
     static int ui_texture_size = 256;
     static Vec2i offset = {-2, -2};
     static f32 z;
+    static bool perlin_2d = true;
 
     if (ImGui::Begin ("Perlin Test", opened))
     {
         {
-            auto child_height = ImGui::GetContentRegionAvail ().y - 4 * ImGui::GetFrameHeightWithSpacing ();
+            int lines = perlin_2d ? 4 : 5;
+            auto child_height = ImGui::GetContentRegionAvail ().y - lines * ImGui::GetFrameHeightWithSpacing ();
             if (ImGui::BeginChild ("Image", {0, child_height}, true, ImGuiWindowFlags_HorizontalScrollbar))
             {
                 if (texture_handle)
@@ -32,8 +34,13 @@ void ui_show_perlin_test_window (bool *opened)
 
         bool should_generate = false;
 
-        if (ImGui::SliderFloat ("Z", &z, -100, 100))
-            should_generate = true;
+        if (!perlin_2d)
+        {
+            if (ImGui::SliderFloat ("Z", &z, -100, 100))
+                should_generate = true;
+        }
+
+        ImGui::Checkbox ("2D Noise", &perlin_2d);
 
         if (ImGui::Button ("Generate"))
         {
@@ -72,7 +79,13 @@ void ui_show_perlin_test_window (bool *opened)
             {
                 for_range (j, 0, texture_size)
                 {
-                    auto value = perlin_noise (cast (f64) (i + offset.x) * scale, cast (f64) (j + offset.y) * scale, z);
+                    f64 value;
+
+                    if (perlin_2d)
+                        value = perlin_noise (cast (f64) (i + offset.x) * scale, cast (f64) (j + offset.y) * scale);
+                    else
+                        value = perlin_noise (cast (f64) (i + offset.x) * scale, cast (f64) (j + offset.y) * scale, z);
+
                     value = (value + 1) * 0.5;
                     u8 color_comp = cast (u8) (value * 255);
                     texture_buffer[i * texture_size + j] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
