@@ -130,6 +130,14 @@ privDefer<F> defer_func (F f)
 
 #define PI 3.14159265358979323846
 
+#define F32_MAX 3.402823466e+38F;
+#define F32_MIN 1.175494351e-38F;
+#define F32_HIGHEST_REPRESENTABLE_INTEGER 16777216;	// 2**(F32_MANTISSA_BITS + 1)
+
+#define F64_MIN 2.2250738585072014e-308;
+#define F64_MAX 1.7976931348623158e+308;
+#define F64_HIGHEST_REPRESENTABLE_INTEGER 9007199254740992;	// 2**(F64_MANTISSA_BITS + 1)
+
 inline
 int decimal_length (u64 n)
 {
@@ -174,6 +182,12 @@ template<typename T>
 T lerp (T a, T b, T t)
 {
     return a + t * (b - a);
+}
+
+template<typename T>
+T inverse_lerp (T a, T b, T t)
+{
+    return (t - a) / (b - a);
 }
 
 inline
@@ -876,6 +890,24 @@ inline
 u32 random_rangei (u32 low, u32 high)
 {
     return random_rangei (&g_rng, low, high);
+}
+
+inline
+f32 random_rangef (LC_RNG *rng, f32 low, f32 high)
+{
+    static const s64 RAND_RANGE = F32_HIGHEST_REPRESENTABLE_INTEGER;
+    static const s64 MASK = RAND_RANGE - 1;
+
+    auto val = random_get (rng);
+    f32 t = (val / cast (f32) RAND_RANGE) * (high - low);
+
+    return low + t;
+}
+
+inline
+f32 random_rangef (f32 low, f32 high)
+{
+    return random_rangef (&g_rng, low, high);
 }
 
 // Platform layer
