@@ -66,8 +66,9 @@ uniform sampler2D u_Texture_Atlas;
 
 void main ()
 {
+    vec3 light_direction = normalize (vec3 (0.5, 1, 0.2));
     vec4 sampled = texture (u_Texture_Atlas, Tex_Coords);
-    Frag_Color = sampled;
+    Frag_Color = sampled * max (dot (Normal, light_direction), 0.25);
 }
 )""";
 
