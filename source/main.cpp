@@ -24,9 +24,23 @@ bool g_generate_new_chunks = true;
 int g_render_distance = 7;
 int g_generation_height = 2;
 
+bool g_show_ui = true;
+
 void glfw_error_callback (int error, const char *description)
 {
     println ("GLFW Error (%d): %s", error, description);
+}
+
+void glfw_key_callback (GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+    {
+        g_show_ui = !g_show_ui;
+        if (g_show_ui)
+            glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        else
+            glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }
 }
 
 void update_flying_camera (Camera *camera)
@@ -60,13 +74,17 @@ void update_flying_camera (Camera *camera)
     camera->euler_angles.pitch += to_rads (delta.y);
     camera->euler_angles.pitch = clamp (camera->euler_angles.pitch, to_rads (-80.0f), to_rads (80.0f));
     camera->rotation = quat_from_euler_angles<f32> (camera->euler_angles);
+}
 
+void update_camera_matrices (Camera *camera)
+{
     camera->transform = mat4_transform<f32> (camera->position, camera->rotation);
     camera->view_matrix = inverse (camera->transform);
 
     int viewport_w, viewport_h;
     glfwGetFramebufferSize (g_window, &viewport_w, &viewport_h);
     f32 aspect_ratio = viewport_w / cast (f32) viewport_h;
+
     camera->projection_matrix = mat4_perspective_projection<f32> (camera->fov, aspect_ratio, 0.01, 1000.0);
     camera->view_projection_matrix = camera->projection_matrix * camera->view_matrix;
 }
@@ -105,6 +123,13 @@ int main (int argc, const char **args)
     glfwMakeContextCurrent (g_window);
     glfwSwapInterval(1);
 
+    glfwSetKeyCallback (g_window, glfw_key_callback);
+
+    if (g_show_ui)
+        glfwSetInputMode (g_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    else
+        glfwSetInputMode (g_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
     int gl_version = gladLoadGL (cast (GLADloadfunc) glfwGetProcAddress);
     println ("GL Version %d.%d", GLAD_VERSION_MAJOR (gl_version), GLAD_VERSION_MINOR (gl_version));
 
@@ -128,6 +153,7 @@ int main (int argc, const char **args)
         style->FramePadding = {10, 6};
         style->SeparatorTextBorderSize = 1;
         style->FrameBorderSize = 1;
+        style->ItemSpacing.y = 6;
         style->ItemInnerSpacing.x = 8;
         style->Colors[ImGuiCol_Border].w = 0.25;
     }
@@ -187,7 +213,9 @@ int main (int argc, const char **args)
         g_curr_mouse_pos = {cast (f32) mx, cast (f32) my};
         g_mouse_delta = g_curr_mouse_pos - g_prev_mouse_pos;
 
-        update_flying_camera (&g_camera);
+        if (!g_show_ui)
+            update_flying_camera (&g_camera);
+        update_camera_matrices (&g_camera);
 
         if (g_generate_new_chunks)
         {
@@ -234,7 +262,8 @@ int main (int argc, const char **args)
         ImGui_ImplGlfw_NewFrame ();
         ImGui::NewFrame ();
 
-        ui_show_windows ();
+        if (g_show_ui)
+            ui_show_windows ();
 
         int width, height;
         glfwGetFramebufferSize (g_window, &width, &height);
