@@ -32,9 +32,7 @@ extern s64 g_drawn_vertex_count;
 extern s64 g_delta_time;    // In micro seconds
 
 extern bool g_generate_new_chunks;
-
 extern int g_render_distance;
-extern int g_generation_height;
 
 struct Vertex;
 struct Camera;
@@ -128,6 +126,45 @@ struct Block
 const Block Block_Air = {};
 
 const int Chunk_Size = 16;
+const int Chunk_Height = 384;
+
+const f64 Default_Continentalness_Scale = 0.012;
+const int Default_Continentalness_Octaves = 3;
+const f64 Default_Continentalness_Persistance = 0.5;
+const f64 Default_Continentalness_Lacunarity = 1.5;
+
+const f64 Default_Erosion_Scale = 0.012;
+const int Default_Erosion_Octaves = 3;
+const f64 Default_Erosion_Persistance = 0.5;
+const f64 Default_Erosion_Lacunarity = 1.5;
+
+const f64 Default_PV_Scale = 0.012;
+const int Default_PV_Octaves = 3;
+const f64 Default_PV_Persistance = 0.5;
+const f64 Default_PV_Lacunarity = 1.5;
+
+static const f64 Surface_Scale = 0.0172;
+static const f64 Surface_Height_Threshold = 20;
+static const f64 Surface_Level = 120;
+static const f64 Cavern_Scale = 0.05674;
+
+enum Terrain_Value
+{
+    Terrain_Value_Continentalness,
+    Terrain_Value_Erosion,
+    Terrain_Value_Peaks_And_Valleys,
+};
+
+union Terrain_Values
+{
+    struct
+    {
+        f32 continentalness;
+        f32 erosion;
+        f32 peaks_and_valleys;
+    };
+    f32 array[3];
+};
 
 struct Chunk
 {
@@ -135,10 +172,8 @@ struct Chunk
     Chunk *west;
     Chunk *north;
     Chunk *south;
-    Chunk *below;
-    Chunk *above;
 
-    s64 x, y, z;
+    s64 x, z;
 
     s64 vertex_count;
     GLuint gl_vbo;
@@ -146,24 +181,28 @@ struct Chunk
     bool is_dirty;
     bool generated;
 
-    Block blocks[Chunk_Size * Chunk_Size * Chunk_Size];
+    Terrain_Values terrain_values[Chunk_Size * Chunk_Size];
+    Block blocks[Chunk_Size * Chunk_Size * Chunk_Height];
 };
 
-const int Min_Chunk_Y = -4;    // -64
-const int Max_Chunk_Y = 20;    // 320
-
-typedef Chunk *Chunk_Column[Max_Chunk_Y - Min_Chunk_Y + 1];
+#define chunk_block_index(x, y, z) ((y) * Chunk_Size * Chunk_Size + (x) * Chunk_Size + (z))
 
 struct World
 {
     s32 seed;
+
+    Vec2f continentalness_offsets[Default_Continentalness_Octaves];
+    Vec2f erosion_offsets[Default_Erosion_Octaves];
+    Vec2f peaks_and_valleys_offsets[Default_PV_Octaves];
+
     Chunk *origin_chunk;
-    Hash_Map<Vec2i, Chunk_Column> all_loaded_chunks;
+    Hash_Map<Vec2i, Chunk *> all_loaded_chunks;
 };
 
 extern World g_world;
 
-void chunk_init (Chunk *chunk, s64 x, s64 y, s64 z);
+void chunk_init (Chunk *chunk, s64 x, s64 z);
+void chunk_cleanup (Chunk *chunk);
 Chunk *chunk_get_at_relative_coordinates (Chunk *chunk, s64 x, s64 y, s64 z);
 Block chunk_get_block_in_chunk (Chunk *chunk, s64 x, s64 y, s64 z);
 Block chunk_get_block (Chunk *chunk, s64 x, s64 y, s64 z);
@@ -172,8 +211,8 @@ void chunk_generate_mesh_data (Chunk *chunk);
 void chunk_draw (Chunk *chunk, Camera *camera);
 
 void world_init (World *world, s32 seed, int chunks_to_pre_generate = 0);
-Chunk_Column *world_get_chunk_column (World *world, s64 x, s64 z);
-Chunk *world_get_chunk (World *world, s64 x, s64 y, s64 z);
-Chunk *world_create_chunk (World *world, s64 x, s64 y, s64 z);
-Chunk *world_generate_chunk (World *world, s64 x, s64 y, s64 z);
+Chunk *world_get_chunk (World *world, s64 x, s64 z);
+Chunk *world_create_chunk (World *world, s64 x, s64 z);
+Chunk *world_generate_chunk (World *world, s64 x, s64 z);
 void world_draw_chunks (World *world, Camera *camera);
+void world_clear_chunks (World *world);

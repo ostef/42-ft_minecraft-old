@@ -20,9 +20,7 @@ s64 g_drawn_vertex_count = 0;
 s64 g_delta_time = 0;
 
 bool g_generate_new_chunks = true;
-
 int g_render_distance = 7;
-int g_generation_height = 2;
 
 bool g_show_ui = true;
 
@@ -220,38 +218,31 @@ int main (int argc, const char **args)
         if (g_generate_new_chunks)
         {
             s64 camera_chunk_x = cast (s64) g_camera.position.x / Chunk_Size;
-            s64 camera_chunk_y = cast (s64) g_camera.position.y / Chunk_Size;
             s64 camera_chunk_z = cast (s64) g_camera.position.z / Chunk_Size;
 
             for_range (x, camera_chunk_x - g_render_distance, camera_chunk_x + g_render_distance)
             {
-                for_range (y,
-                    clamp (camera_chunk_y - g_generation_height, cast (s64) Min_Chunk_Y, cast (s64) Max_Chunk_Y),
-                    clamp (camera_chunk_y + g_generation_height, cast (s64) Min_Chunk_Y, cast (s64) Max_Chunk_Y)
-                )
+                for_range (z, camera_chunk_z - g_render_distance, camera_chunk_z + g_render_distance)
                 {
-                    for_range (z, camera_chunk_z - g_render_distance, camera_chunk_z + g_render_distance)
+                    Vec2f planar_camera_pos = Vec2f{g_camera.position.x, g_camera.position.z};
+                    Vec2f chunk_pos = Vec2f{cast (f32) x * Chunk_Size, cast (f32) z * Chunk_Size};
+
+                    if (distance (planar_camera_pos, chunk_pos) < g_render_distance * Chunk_Size)
                     {
-                        Vec2f planar_camera_pos = Vec2f{g_camera.position.x, g_camera.position.z};
-                        Vec2f planar_chunk_pos = Vec2f{cast (f32) x * Chunk_Size, cast (f32) z * Chunk_Size};
+                        s64 time_start = time_current_monotonic ();
 
-                        if (distance (planar_camera_pos, planar_chunk_pos) < g_render_distance * Chunk_Size)
+                        auto current_chunk = world_create_chunk (&g_world, x, z);
+
+                        if (!current_chunk->generated)
                         {
-                            s64 time_start = time_current_monotonic ();
+                            g_chunk_creation_time += time_current_monotonic () - time_start;
+                            g_chunk_creation_samples += 1;
 
-                            auto current_chunk = world_create_chunk (&g_world, x, y, z);
+                            chunk_generate (&g_world, current_chunk);
 
-                            if (!current_chunk->generated)
-                            {
-                                g_chunk_creation_time += time_current_monotonic () - time_start;
-                                g_chunk_creation_samples += 1;
-
-                                chunk_generate (&g_world, current_chunk);
-
-                                s64 time_end = time_current_monotonic ();
-                                g_chunk_generation_time += time_end - time_start;
-                                g_chunk_generation_samples += 1;
-                            }
+                            s64 time_end = time_current_monotonic ();
+                            g_chunk_generation_time += time_end - time_start;
+                            g_chunk_generation_samples += 1;
                         }
                     }
                 }

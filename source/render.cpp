@@ -221,20 +221,16 @@ void world_draw_chunks (World *world, Camera *camera)
     g_drawn_vertex_count = 0;
     for_hash_map (it, world->all_loaded_chunks)
     {
-        for_range (i, 0, Max_Chunk_Y - Min_Chunk_Y)
+        auto chunk = *it.value;
+
+        Vec2f camera_planar_pos = {camera->position.x, camera->position.z};
+        Vec2f world_chunk_pos = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
+
+        if (distance (world_chunk_pos, camera_planar_pos) < cast (f64) g_render_distance * Chunk_Size)
         {
-            auto chunk = (*it.value)[i];
-            if (!chunk)
-                continue;
-
-            Vec3f world_chunk_pos = {cast (f32) chunk->x * Chunk_Size, cast (f32) chunk->y * Chunk_Size, cast (f32) chunk->z * Chunk_Size};
-
-            if (distance (world_chunk_pos, camera->position) < cast (f64) g_render_distance * Chunk_Size)
-            {
-                chunk_generate_mesh_data (chunk);
-                chunk_draw (chunk, &g_camera);
-                g_drawn_vertex_count += chunk->vertex_count;
-            }
+            chunk_generate_mesh_data (chunk);
+            chunk_draw (chunk, &g_camera);
+            g_drawn_vertex_count += chunk->vertex_count;
         }
     }
 }
