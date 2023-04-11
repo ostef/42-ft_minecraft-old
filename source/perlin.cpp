@@ -171,12 +171,14 @@ f64 perlin_noise (f64 x, f64 y, f64 z)
 #undef P
 }
 
+static const f64 Perlin_Fractal_Min_Amplitude = 0.00001;
+
 inline
 f64 perlin_fractal_max (int octaves, f64 persistance)
 {
     f64 result = 0;
     f64 amplitude = 1;
-    for_range (i, 0, octaves)
+    for (int i = 0; i < octaves && amplitude > Perlin_Fractal_Min_Amplitude; i += 1)
     {
         result += amplitude;
         amplitude *= persistance;
@@ -191,7 +193,7 @@ f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistanc
     f64 result = 0;
     f64 amplitude = 1;
     f64 frequency = 1;
-    for_range (i, 0, octaves)
+    for (int i = 0; i < octaves && amplitude > Perlin_Fractal_Min_Amplitude; i += 1)
     {
         result += perlin_noise (
             x * scale * frequency + offsets[i].x,
@@ -210,7 +212,7 @@ f64 perlin_fractal_noise (f64 scale, int octaves, Vec3f *offsets, f64 persistanc
     f64 result = 0;
     f64 amplitude = 1;
     f64 frequency = 1;
-    for_range (i, 0, octaves)
+    for (int i = 0; i < octaves && amplitude > Perlin_Fractal_Min_Amplitude; i += 1)
     {
         result += perlin_noise (
             x * scale * frequency + offsets[i].x,
