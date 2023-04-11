@@ -794,6 +794,13 @@ Hash_Map_Iter<Key, Value> hash_map_next (Hash_Map<Key, Value> *map, const Hash_M
     return {index, &map->entries[index].key, &map->entries[index].value};
 }
 
+template<typename Key, typename Value>
+void hash_map_it_remove (Hash_Map<Key, Value> *map, const Hash_Map_Iter<Key, Value> &it)
+{
+    map->entries[it.index].hash = HASH_REMOVED;
+    map->count -= 1;
+}
+
 // Hash
 
 inline
@@ -876,6 +883,18 @@ inline
 u32 random_get ()
 {
     return random_get (&g_rng);
+}
+
+inline
+s32 random_get_s32 (LC_RNG *rng)
+{
+    return cast (s32) (random_get (rng) - INT_MAX / 2);
+}
+
+inline
+s32 random_get_s32 ()
+{
+    return random_get_s32 (&g_rng);
 }
 
 inline
