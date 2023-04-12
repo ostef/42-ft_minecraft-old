@@ -9,7 +9,7 @@
 #include <stb_sprintf.h>
 
 inline
-int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
+static int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -26,7 +26,7 @@ int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 }
 
 inline
-int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
+static int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 {
     int w = stbsp_vsnprintf(buf, (int)buf_size, fmt, args);
 
@@ -46,3 +46,10 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+
+namespace ImGuiExt
+{
+    #define ImGuiExt_BezierCurve_PointCountFromCurveCount(n) (4 * (n) - (n) + 1)
+    
+    bool BezierCurveEditor (const char *label, const ImVec2 &size, int maxControlPoints, int *controlPointCount, ImVec2 *controlPoints);
+}
