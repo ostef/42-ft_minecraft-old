@@ -190,6 +190,9 @@ f64 perlin_fractal_max (int octaves, f64 persistance)
 inline
 f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistance, f64 lacunarity, f64 x, f64 y)
 {
+    if (octaves > Perlin_Fractal_Max_Octaves)
+        octaves = Perlin_Fractal_Max_Octaves;
+
     f64 result = 0;
     f64 amplitude = 1;
     f64 frequency = 1;
@@ -207,8 +210,17 @@ f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistanc
 }
 
 inline
+f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f64 y)
+{
+    return perlin_fractal_noise (params.scale, params.octaves, offsets, params.persistance, params.lacunarity, x, y);
+}
+
+inline
 f64 perlin_fractal_noise (f64 scale, int octaves, Vec3f *offsets, f64 persistance, f64 lacunarity, f64 x, f64 y, f64 z)
 {
+    if (octaves > Perlin_Fractal_Max_Octaves)
+        octaves = Perlin_Fractal_Max_Octaves;
+
     f64 result = 0;
     f64 amplitude = 1;
     f64 frequency = 1;
@@ -224,4 +236,10 @@ f64 perlin_fractal_noise (f64 scale, int octaves, Vec3f *offsets, f64 persistanc
     }
 
     return result;
+}
+
+inline
+f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f64 y, f64 z)
+{
+    return perlin_fractal_noise (params.scale, params.octaves, offsets, params.persistance, params.lacunarity, x, y, z);
 }
