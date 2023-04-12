@@ -59,9 +59,9 @@ void generate_noise_texture (GLuint *tex,
     int width, int height, f64 offset_x, f64 offset_y,
     int seed, f64 scale, int octaves, f64 persistance, f64 lacunarity)
 {
-    Vec2f offsets[6];
+    Vec2f offsets[Perlin_Fractal_Max_Octaves];
 
-    octaves = min (octaves, 6);
+    octaves = clamp (octaves, 1, Perlin_Fractal_Max_Octaves);
 
     LC_RNG rng;
     random_seed (&rng, seed);
@@ -97,18 +97,32 @@ void generate_noise_texture (GLuint *tex,
     glBindTexture (GL_TEXTURE_2D, 0);
 }
 
+bool ui_show_perlin_fractal_params (ImGuiID id, Perlin_Fractal_Params *params)
+{
+    ImGui::PushID (id);
+
+    bool result = false;
+    if (ImGui::SliderFloat ("Scale", &params->scale, 0.001, 0.2))
+        result = true;
+    if (ImGui::SliderInt ("Octaves", &params->octaves, 1, Perlin_Fractal_Max_Octaves))
+        result = true;
+    if (ImGui::SliderFloat ("Persistance", &params->persistance, 0.001, 1))
+        result = true;
+    if (ImGui::SliderFloat ("Lacunarity", &params->lacunarity, 1, 10))
+        result = true;
+
+    ImGui::PopID ();
+
+    return result;
+}
+
 void ui_show_perlin_test_window (bool *opened)
 {
-    static const int Max_Octaves = 6;
-
-    static f32 scale = 0.05;
     static GLuint texture_handle;
     static int texture_size = 256;
     static int seed;
     static f32 offset_x, offset_y;
-    static int octaves = 3;
-    static f32 lacunarity = 1;
-    static f32 persistance = 0.5;
+    static Perlin_Fractal_Params params = {0.05, 3, 0.5, 1.5};
 
     if (ImGui::Begin ("Perlin Test", opened))
     {
@@ -130,13 +144,8 @@ void ui_show_perlin_test_window (bool *opened)
 
         if (ImGui::SliderInt ("Size", &texture_size, 128, 4096))
             should_generate = true;
-        if (ImGui::SliderFloat ("Scale", &scale, 0.001, 0.2))
-            should_generate = true;
-        if (ImGui::SliderInt ("Octaves", &octaves, 1, Max_Octaves))
-            should_generate = true;
-        if (ImGui::SliderFloat ("Persistance", &persistance, 0.001, 1))
-            should_generate = true;
-        if (ImGui::SliderFloat ("Lacunarity", &lacunarity, 1, 10))
+
+        if (ui_show_perlin_fractal_params (0, &params))
             should_generate = true;
 
         if (ImGui::Button ("Generate"))
@@ -157,7 +166,7 @@ void ui_show_perlin_test_window (bool *opened)
 
         if (should_generate)
         {
-            generate_noise_texture (&texture_handle, texture_size, texture_size, offset_x, offset_y, seed, scale, octaves, persistance, lacunarity);
+            generate_noise_texture (&texture_handle, texture_size, texture_size, offset_x, offset_y, seed, params.scale, params.octaves, params.persistance, params.lacunarity);
         }
     }
     ImGui::End ();
@@ -175,14 +184,14 @@ void ui_show_metrics_and_settings_window (bool *opened)
                 total_vertex_count += chunk->vertex_count;
         }
 
-        ImGui::Text ("Frame time: %.2f ms, %.2f FPS", g_delta_time / 1000.0, 1000000.0 / g_delta_time);
-        ImGui::Text ("Position: %.2f %.2f %.2f", g_camera.position.x, g_camera.position.y, g_camera.position.z);
-        ImGui::Text ("Average chunk creation   time: %f us", g_chunk_creation_time / cast (f32) g_chunk_creation_samples);
-        ImGui::Text ("Average chunk generation time: %f us", g_chunk_generation_time / cast (f32) g_chunk_generation_samples);
-        ImGui::Text ("Loaded chunks: %lld", g_world.all_loaded_chunks.count);
-        ImGui::Text ("Total vertex count: %lld", total_vertex_count);
-        ImGui::Text ("Drawn vertex count: %lld", g_drawn_vertex_count);
-        ImGui::Text ("Average vertices per chunk: %lld", total_vertex_count / g_world.all_loaded_chunks.count);
+        ImGui::LabelText ("Frame time", "%.2f ms, %.2f FPS", g_delta_time / 1000.0, 1000000.0 / g_delta_time);
+        ImGui::LabelText ("Position", "%.2f %.2f %.2f", g_camera.position.x, g_camera.position.y, g_camera.position.z);
+        ImGui::LabelText ("Average chunk creation   time", "%f us", g_chunk_creation_time / cast (f32) g_chunk_creation_samples);
+        ImGui::LabelText ("Average chunk generation time", "%f us", g_chunk_generation_time / cast (f32) g_chunk_generation_samples);
+        ImGui::LabelText ("Loaded chunks", "%lld", g_world.all_loaded_chunks.count);
+        ImGui::LabelText ("Total vertex count", "%lld", total_vertex_count);
+        ImGui::LabelText ("Drawn vertex count", "%lld", g_drawn_vertex_count);
+        ImGui::LabelText ("Average vertices per chunk", "%lld", total_vertex_count / g_world.all_loaded_chunks.count);
         ImGui::Checkbox ("Generate new chunks", &g_generate_new_chunks);
         ImGui::SliderInt ("Render distance", &g_render_distance, 1, 12);
     }
@@ -203,8 +212,7 @@ void ui_show_basic_world_settings ()
 {
     static int new_seed = -758789230;
 
-    ImGui::Text ("Seed: %d", g_world.seed);
-
+    ImGui::LabelText ("Seed", "%d", g_world.seed);
 
     if (ImGui::Button ("Generate New"))
     {
@@ -222,7 +230,7 @@ void ui_show_basic_world_settings ()
     }
 }
 
-void ui_show_terrain_noise_maps ()
+void ui_show_terrain_noise_maps (bool generate = false)
 {
     static GLuint continentalness_tex;
     static GLuint erosion_tex;
@@ -253,8 +261,6 @@ void ui_show_terrain_noise_maps ()
     }
     ImGui::EndChild ();
 
-    bool generate = false;
-
     if (!continentalness_tex || !erosion_tex || !peaks_and_valleys_tex)
         generate = true;
 
@@ -280,6 +286,73 @@ void ui_show_terrain_noise_maps ()
     }
 }
 
+void ui_show_advanced_world_settings ()
+{
+    if (ImGui::TreeNode ("Continentalness"))
+    {
+        ImGuiExt::BezierCurveEditor ("Height Curve", ImVec2{200, 200},
+            array_size (g_world.terrain_params.continentalness_bezier_points),
+            &g_world.terrain_params.continentalness_bezier_point_count,
+            cast (ImVec2 *) g_world.terrain_params.continentalness_bezier_points
+        );
+
+        ui_show_perlin_fractal_params (0, &g_world.terrain_params.continentalness_perlin);
+        if (ImGui::Button ("Default"))
+            g_world.terrain_params.continentalness_perlin = Default_Continentalness_Params;
+        ImGui::TreePop ();
+    }
+
+    if (ImGui::TreeNode ("Erosion"))
+    {
+        ImGuiExt::BezierCurveEditor ("Height Curve", ImVec2{200, 200},
+            array_size (g_world.terrain_params.erosion_bezier_points),
+            &g_world.terrain_params.erosion_bezier_point_count,
+            cast (ImVec2 *) g_world.terrain_params.erosion_bezier_points
+        );
+
+        ui_show_perlin_fractal_params (1, &g_world.terrain_params.erosion_perlin);
+        if (ImGui::Button ("Default"))
+            g_world.terrain_params.erosion_perlin = Default_Erosion_Params;
+        ImGui::TreePop ();
+    }
+
+    if (ImGui::TreeNode ("Peaks And Valleys"))
+    {
+        ImGuiExt::BezierCurveEditor ("Height Curve", ImVec2{200, 200},
+            array_size (g_world.terrain_params.peaks_and_valleys_bezier_points),
+            &g_world.terrain_params.peaks_and_valleys_bezier_point_count,
+            cast (ImVec2 *) g_world.terrain_params.peaks_and_valleys_bezier_points
+        );
+
+        ui_show_perlin_fractal_params (2, &g_world.terrain_params.peaks_and_valleys_perlin);
+        if (ImGui::Button ("Default"))
+            g_world.terrain_params.peaks_and_valleys_perlin = Default_Peaks_And_Valleys_Params;
+        ImGui::TreePop ();
+    }
+
+    ImGui::Separator ();
+
+    bool generated = false;
+
+    if (ImGui::Button ("Generate New"))
+    {
+        world_clear_chunks (&g_world);
+        world_init (&g_world, random_get_s32 (), g_render_distance / 2 + 1, g_world.terrain_params);
+        generated = true;
+    }
+
+    ImGui::SameLine ();
+
+    if (ImGui::Button ("Regenerate"))
+    {
+        world_clear_chunks (&g_world);
+        world_init (&g_world, g_world.seed, g_render_distance / 2 + 1, g_world.terrain_params);
+        generated = true;
+    }
+
+    ui_show_terrain_noise_maps (generated);
+}
+
 void ui_show_world_window (bool *opened)
 {
     if (ImGui::Begin ("World", opened))
@@ -289,6 +362,12 @@ void ui_show_world_window (bool *opened)
             if (ImGui::BeginTabItem ("Basic Settings"))
             {
                 ui_show_basic_world_settings ();
+                ImGui::EndTabItem ();
+            }
+
+            if (ImGui::BeginTabItem ("Advanced Settings"))
+            {
+                ui_show_advanced_world_settings ();
                 ImGui::EndTabItem ();
             }
 

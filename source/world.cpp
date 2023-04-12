@@ -108,9 +108,9 @@ void chunk_generate (World *world, Chunk *chunk)
 
     defer (chunk->generated = true);
 
-    f32 continentalness_max = perlin_fractal_max (Default_Continentalness_Octaves, Default_Continentalness_Persistance);
-    f32 erosion_max = perlin_fractal_max (Default_Erosion_Octaves, Default_Erosion_Persistance);
-    f32 peaks_and_valleys_max = perlin_fractal_max (Default_PV_Octaves, Default_PV_Persistance);
+    f32 continentalness_max = perlin_fractal_max (world->terrain_params.continentalness_perlin.octaves, world->terrain_params.continentalness_perlin.persistance);
+    f32 erosion_max = perlin_fractal_max (world->terrain_params.erosion_perlin.octaves, world->terrain_params.erosion_perlin.persistance);
+    f32 peaks_and_valleys_max = perlin_fractal_max (world->terrain_params.peaks_and_valleys_perlin.octaves, world->terrain_params.peaks_and_valleys_perlin.persistance);
 
     for_range (x, 0, Chunk_Size)
     {
@@ -120,22 +120,13 @@ void chunk_generate (World *world, Chunk *chunk)
             f64 perlin_z = cast (f64) (z + chunk->z * Chunk_Size);
 
             auto values = &chunk->terrain_values[x * Chunk_Size + z];
-            values->continentalness = perlin_fractal_noise (
-                Default_Continentalness_Scale, Default_Continentalness_Octaves,
-                world->continentalness_offsets, Default_Continentalness_Persistance, Default_Continentalness_Lacunarity,
-                perlin_x, perlin_z);
+            values->continentalness = perlin_fractal_noise (world->terrain_params.continentalness_perlin, world->continentalness_offsets, perlin_x, perlin_z);
             values->continentalness = inverse_lerp (-continentalness_max, continentalness_max, values->continentalness);
 
-            values->erosion = perlin_fractal_noise (
-                Default_Erosion_Scale, Default_Erosion_Octaves,
-                world->erosion_offsets, Default_Erosion_Persistance, Default_Erosion_Lacunarity,
-                perlin_x, perlin_z);
+            values->erosion = perlin_fractal_noise (world->terrain_params.erosion_perlin, world->erosion_offsets, perlin_x, perlin_z);
             values->erosion = inverse_lerp (-erosion_max, erosion_max, values->erosion);
 
-            values->peaks_and_valleys = perlin_fractal_noise (
-                Default_PV_Scale, Default_PV_Octaves,
-                world->peaks_and_valleys_offsets, Default_PV_Persistance, Default_PV_Lacunarity,
-                perlin_x, perlin_z);
+            values->peaks_and_valleys = perlin_fractal_noise (world->terrain_params.peaks_and_valleys_perlin, world->peaks_and_valleys_offsets, perlin_x, perlin_z);
             values->peaks_and_valleys = inverse_lerp (-peaks_and_valleys_max, peaks_and_valleys_max, values->peaks_and_valleys);
         }
     }
@@ -372,29 +363,30 @@ bool compare_vec2i (const Vec2i &a, const Vec2i &b)
     return a == b;
 }
 
-void world_init (World *world, s32 seed, int chunks_to_pre_generate)
+void world_init (World *world, s32 seed, int chunks_to_pre_generate, Terrain_Params terrain_params)
 {
     memset (world, 0, sizeof (World));
 
     world->seed = seed;
+    world->terrain_params = terrain_params;
 
     LC_RNG rng;
     random_seed (&rng, seed);
     random_seed (&rng, random_get_s32 (&rng));
 
-    for_range (i, 0, Default_Continentalness_Octaves)
+    for_range (i, 0, world->terrain_params.continentalness_perlin.octaves)
     {
         world->continentalness_offsets[i].x = random_rangef (&rng, -10000, 10000);
         world->continentalness_offsets[i].y = random_rangef (&rng, -10000, 10000);
     }
 
-    for_range (i, 0, Default_Erosion_Octaves)
+    for_range (i, 0, world->terrain_params.erosion_perlin.octaves)
     {
         world->erosion_offsets[i].x = random_rangef (&rng, -10000, 10000);
         world->erosion_offsets[i].y = random_rangef (&rng, -10000, 10000);
     }
 
-    for_range (i, 0, Default_PV_Octaves)
+    for_range (i, 0, world->terrain_params.peaks_and_valleys_perlin.octaves)
     {
         world->peaks_and_valleys_offsets[i].x = random_rangef (&rng, -10000, 10000);
         world->peaks_and_valleys_offsets[i].y = random_rangef (&rng, -10000, 10000);

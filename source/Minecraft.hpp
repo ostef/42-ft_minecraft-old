@@ -135,25 +135,16 @@ struct Block
     Block_Type type;
 };
 
-const Block Block_Air = {};
+static const Block Block_Air = {};
 
-const int Chunk_Size = 16;
-const int Chunk_Height = 384;
+static const int Chunk_Size = 16;
+static const int Chunk_Height = 384;
 
-const f64 Default_Continentalness_Scale = 0.012;
-const int Default_Continentalness_Octaves = 3;
-const f64 Default_Continentalness_Persistance = 0.5;
-const f64 Default_Continentalness_Lacunarity = 1.5;
+static const int Terrain_Curves_Max_Points = ImGuiExt_BezierCurve_PointCountFromCurveCount (10);
 
-const f64 Default_Erosion_Scale = 0.012;
-const int Default_Erosion_Octaves = 3;
-const f64 Default_Erosion_Persistance = 0.5;
-const f64 Default_Erosion_Lacunarity = 1.5;
-
-const f64 Default_PV_Scale = 0.012;
-const int Default_PV_Octaves = 3;
-const f64 Default_PV_Persistance = 0.5;
-const f64 Default_PV_Lacunarity = 1.5;
+static const Perlin_Fractal_Params Default_Continentalness_Params = { 0.012, 3, 0.5, 1.5 };
+static const Perlin_Fractal_Params Default_Erosion_Params = { 0.012, 3, 0.5, 1.5 };
+static const Perlin_Fractal_Params Default_Peaks_And_Valleys_Params = { 0.012, 3, 0.5, 1.5 };
 
 static const f64 Surface_Scale = 0.0172;
 static const f64 Surface_Height_Threshold = 20;
@@ -176,6 +167,20 @@ union Terrain_Values
         f32 peaks_and_valleys;
     };
     f32 array[3];
+};
+
+struct Terrain_Params
+{
+    Vec2f continentalness_bezier_points[Terrain_Curves_Max_Points];
+    int continentalness_bezier_point_count;
+    Vec2f erosion_bezier_points[Terrain_Curves_Max_Points];
+    int erosion_bezier_point_count;
+    Vec2f peaks_and_valleys_bezier_points[Terrain_Curves_Max_Points];
+    int peaks_and_valleys_bezier_point_count;
+
+    Perlin_Fractal_Params continentalness_perlin = Default_Continentalness_Params;
+    Perlin_Fractal_Params erosion_perlin = Default_Erosion_Params;
+    Perlin_Fractal_Params peaks_and_valleys_perlin = Default_Peaks_And_Valleys_Params;
 };
 
 struct Chunk
@@ -203,9 +208,11 @@ struct World
 {
     s32 seed;
 
-    Vec2f continentalness_offsets[Default_Continentalness_Octaves];
-    Vec2f erosion_offsets[Default_Erosion_Octaves];
-    Vec2f peaks_and_valleys_offsets[Default_PV_Octaves];
+    Terrain_Params terrain_params;
+
+    Vec2f continentalness_offsets[Perlin_Fractal_Max_Octaves];
+    Vec2f erosion_offsets[Perlin_Fractal_Max_Octaves];
+    Vec2f peaks_and_valleys_offsets[Perlin_Fractal_Max_Octaves];
 
     Chunk *origin_chunk;
     Hash_Map<Vec2i, Chunk *> all_loaded_chunks;
@@ -222,7 +229,7 @@ void chunk_generate (World *world, Chunk *chunk);
 void chunk_generate_mesh_data (Chunk *chunk);
 void chunk_draw (Chunk *chunk, Camera *camera);
 
-void world_init (World *world, s32 seed, int chunks_to_pre_generate = 0);
+void world_init (World *world, s32 seed, int chunks_to_pre_generate = 0, Terrain_Params terrain_params = {});
 Chunk *world_get_chunk (World *world, s64 x, s64 z);
 Chunk *world_create_chunk (World *world, s64 x, s64 z);
 Chunk *world_generate_chunk (World *world, s64 x, s64 z);
