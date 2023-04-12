@@ -38,11 +38,15 @@ if not exist gl.obj (
     cl %compiler_flags% /Ithird_party\glad\include\ -c "third_party\glad\src\gl.c"
 )
 
+if %errorlevel% neq 0 goto error
+
 if not exist ImGui.obj (
     cl %compiler_options% -c "source\ImGui.cpp"
 ) else if %always_compile_third_party% == 1 (
     cl %compiler_options% -c "source\ImGui.cpp"
 )
+
+if %errorlevel% neq 0 goto error
 
 cl %compiler_options% "source\Linalg\gen_Linalg.cpp" /link %linker_options% -OUT:gen_Linalg.exe
 
