@@ -17,7 +17,7 @@ where /Q cl.exe || (
     call "!VS!\VC\Auxiliary\Build\vcvarsall.bat" amd64 || exit /b 1
 )
 
-set always_compile_third_party=0
+set always_compile_third_party=1
 
 set output_name=minecraft.exe
 
