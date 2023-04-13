@@ -296,45 +296,92 @@ void ui_show_terrain_noise_maps (bool generate = false)
 
 void ui_show_advanced_world_settings ()
 {
+    static const f32 Curve_Editor_Size_Ratio = 0.6;
+
     if (ImGui::TreeNode ("Continentalness"))
     {
-        ImGuiExt::BezierCurveEditor ("Height Curve", ImVec2{200, 200},
+        ImGui::Columns (2, 0, false);
+
+        ImVec2 size;
+        size.x = ImGui::GetContentRegionAvail ().x - ImGui::GetStyle ().WindowPadding.x;
+        size.y = size.x * Curve_Editor_Size_Ratio;
+        ImGuiExt::BezierCurveEditor ("Height Curve", size,
             array_size (g_world.terrain_params.continentalness_bezier_points),
             &g_world.terrain_params.continentalness_bezier_point_count,
             cast (ImVec2 *) g_world.terrain_params.continentalness_bezier_points
         );
 
+        ImGui::NextColumn ();
+
         ui_show_perlin_fractal_params (0, &g_world.terrain_params.continentalness_perlin);
         if (ImGui::Button ("Default"))
-            g_world.terrain_params.continentalness_perlin = Default_Continentalness_Params;
+        {
+            Vec2f dummy[] = Default_Continentalness_Bezier_Points;
+            memcpy (&g_world.terrain_params.continentalness_bezier_points, dummy, sizeof (Vec2f) * Default_Continentalness_Bezier_Count);
+            g_world.terrain_params.continentalness_bezier_point_count = Default_Continentalness_Bezier_Count;
+            g_world.terrain_params.continentalness_perlin = Default_Continentalness_Perlin_Params;
+        }
+
+        ImGui::Columns ();
+
         ImGui::TreePop ();
     }
 
     if (ImGui::TreeNode ("Erosion"))
     {
-        ImGuiExt::BezierCurveEditor ("Height Curve", ImVec2{200, 200},
+        ImGui::Columns (2, 0, false);
+
+        ImVec2 size;
+        size.x = ImGui::GetContentRegionAvail ().x - ImGui::GetStyle ().WindowPadding.x;
+        size.y = size.x * Curve_Editor_Size_Ratio;
+        ImGuiExt::BezierCurveEditor ("Height Curve", size,
             array_size (g_world.terrain_params.erosion_bezier_points),
             &g_world.terrain_params.erosion_bezier_point_count,
             cast (ImVec2 *) g_world.terrain_params.erosion_bezier_points
         );
 
+        ImGui::NextColumn ();
+
         ui_show_perlin_fractal_params (1, &g_world.terrain_params.erosion_perlin);
         if (ImGui::Button ("Default"))
-            g_world.terrain_params.erosion_perlin = Default_Erosion_Params;
+        {
+            Vec2f dummy[] = Default_Erosion_Bezier_Points;
+            memcpy (&g_world.terrain_params.erosion_bezier_points, dummy, sizeof (Vec2f) * Default_Erosion_Bezier_Count);
+            g_world.terrain_params.erosion_bezier_point_count = Default_Erosion_Bezier_Count;
+            g_world.terrain_params.erosion_perlin = Default_Erosion_Perlin_Params;
+        }
+
+        ImGui::Columns ();
+
         ImGui::TreePop ();
     }
 
     if (ImGui::TreeNode ("Peaks And Valleys"))
     {
-        ImGuiExt::BezierCurveEditor ("Height Curve", ImVec2{200, 200},
+        ImGui::Columns (2, 0, false);
+
+        ImVec2 size;
+        size.x = ImGui::GetContentRegionAvail ().x - ImGui::GetStyle ().WindowPadding.x;
+        size.y = size.x * Curve_Editor_Size_Ratio;
+        ImGuiExt::BezierCurveEditor ("Height Curve", size,
             array_size (g_world.terrain_params.peaks_and_valleys_bezier_points),
             &g_world.terrain_params.peaks_and_valleys_bezier_point_count,
             cast (ImVec2 *) g_world.terrain_params.peaks_and_valleys_bezier_points
         );
 
+        ImGui::NextColumn ();
+
         ui_show_perlin_fractal_params (2, &g_world.terrain_params.peaks_and_valleys_perlin);
         if (ImGui::Button ("Default"))
-            g_world.terrain_params.peaks_and_valleys_perlin = Default_Peaks_And_Valleys_Params;
+        {
+            Vec2f dummy[] = Default_Peaks_And_Valleys_Bezier_Points;
+            memcpy (&g_world.terrain_params.peaks_and_valleys_bezier_points, dummy, sizeof (Vec2f) * Default_Peaks_And_Valleys_Bezier_Count);
+            g_world.terrain_params.peaks_and_valleys_bezier_point_count = Default_Peaks_And_Valleys_Bezier_Count;
+            g_world.terrain_params.peaks_and_valleys_perlin = Default_Peaks_And_Valleys_Perlin_Params;
+        }
+
+        ImGui::Columns ();
+
         ImGui::TreePop ();
     }
 
