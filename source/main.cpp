@@ -24,6 +24,44 @@ int g_render_distance = 7;
 
 bool g_show_ui = true;
 
+Vec2f bezier_cubic_calculate (int count, Vec2f *points, f32 t)
+{
+    Vec2f p0, p1;
+
+    if (t < points[0].x)
+    {
+        p0 = points[0];
+        p1 = points[3];
+        t = inverse_lerp (p0.x, p1.x, t);
+
+        return bezier_cubic_calculate (p0, points[1], points[2], p1, t);
+    }
+
+    int curve_count = ImGuiExt_BezierCurve_CurveCountFromPointCount (count);
+    for_range (i, 0, curve_count)
+    {
+        if (t >= points[i * 3].x && t <= points[i * 3 + 3].x)
+        {
+            p0 = points[i * 3];
+            p1 = points[i * 3 + 3];
+
+            return bezier_cubic_calculate (
+                p0,
+                points[i * 3 + 1],
+                points[i * 3 + 2],
+                p1,
+                inverse_lerp (p0.x, p1.x, t)
+            );
+        }
+    }
+
+    p0 = points[count - 4];
+    p1 = points[count - 1];
+    t = inverse_lerp (p0.x, p1.x, t);
+
+    return bezier_cubic_calculate (p0, points[count - 3], points[count - 2], p1, t);
+}
+
 void glfw_error_callback (int error, const char *description)
 {
     println ("GLFW Error (%d): %s", error, description);

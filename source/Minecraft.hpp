@@ -59,6 +59,20 @@ f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f
 f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistance, f64 lacunarity, f64 x, f64 y, f64 z);
 f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f64 y, f64 z);
 
+inline
+static Vec2f bezier_cubic_calculate (const Vec2f &p1, const Vec2f &p2, const Vec2f &p3, const Vec2f &p4, f32 t)
+{
+    f32 u = 1.0f - t;
+    f32 w1 = u * u * u;
+    f32 w2 = 3 * u * u * t;
+    f32 w3 = 3 * u * t * t;
+    f32 w4 = t * t * t;
+
+    return Vec2f{w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x, w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y};
+}
+
+Vec2f bezier_cubic_calculate (int count, Vec2f *points, f32 t);
+
 bool load_texture_atlas (const char *texture_dirname);
 
 struct Camera
