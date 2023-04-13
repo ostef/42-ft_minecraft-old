@@ -49,7 +49,8 @@ static int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list 
 
 namespace ImGuiExt
 {
-    #define ImGuiExt_BezierCurve_PointCountFromCurveCount(n) (4 * (n) - (n) + 1)
-    
+    #define ImGuiExt_BezierCurve_PointCountFromCurveCount(n) (3 * (n) + 1)
+    #define ImGuiExt_BezierCurve_CurveCountFromPointCount(n) (((n) - 1) / 3)
+
     bool BezierCurveEditor (const char *label, const ImVec2 &size, int maxControlPoints, int *controlPointCount, ImVec2 *controlPoints);
 }

@@ -83,9 +83,12 @@ namespace ImGuiExt
 
         auto style = ImGui::GetStyle ();
 
+        ImGui::PushID (str_id);
+
         if (!ImGui::BeginChild (str_id, size + style.WindowPadding * 2, true))
         {
             ImGui::EndChild ();
+            ImGui::PopID ();
             return false;
         }
 
@@ -133,7 +136,7 @@ namespace ImGuiExt
                 );
         }
 
-        int curve_count = (*control_point_count - 1) / 3;
+        int curve_count = ImGuiExt_BezierCurve_CurveCountFromPointCount (*control_point_count);
 
         // Move points
         int point_hovered = -1;
@@ -226,7 +229,7 @@ namespace ImGuiExt
             }
         }
 
-        curve_count = (*control_point_count - 1) / 3;
+        curve_count = ImGuiExt_BezierCurve_CurveCountFromPointCount (*control_point_count);
 
         // Draw lines
         for (int i = 0; i < curve_count; i += 1)
@@ -263,6 +266,47 @@ namespace ImGuiExt
         }
 
         ImGui::EndChild ();
+
+        bool log = false;
+        if (ImGui::Button ("Copy to clipboard"))
+        {
+            ImGui::LogToClipboard ();
+            log = true;
+        }
+
+        ImGui::SameLine ();
+
+        if (ImGui::Button ("Log to TTY"))
+        {
+            ImGui::LogToTTY ();
+            log = true;
+        }
+
+        if (log)
+        {
+            ImGui::LogText ("{\n");
+            for (int i = 0; i < curve_count; i += 1)
+            {
+                ImGui::LogText ("    {%f, %f}, {%f, %f}, {%f, %f},\n",
+                    control_points[i * 3 + 0].x, control_points[i * 3 + 0].y,
+                    control_points[i * 3 + 1].x, control_points[i * 3 + 1].y,
+                    control_points[i * 3 + 2].x, control_points[i * 3 + 2].y
+                );
+            }
+
+            if (curve_count > 1)
+            {
+                ImGui::LogText ("    {%f, %f},\n",
+                    control_points[*control_point_count - 1].x, control_points[*control_point_count - 1].y
+                );
+            }
+
+            ImGui::LogText ("}");
+
+            ImGui::LogFinish ();
+        }
+
+        ImGui::PopID ();
 
         return modified;
     }
