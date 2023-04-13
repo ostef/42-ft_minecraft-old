@@ -6,7 +6,7 @@ static bool g_show_perlin_test_window;
 static bool g_show_texture_atlas_window;
 static bool g_show_world_window;
 
-void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrain_Value terrain_value)
+void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrain_Value terrain_value, bool with_bezier_modifier)
 {
     int texture_size = size * Chunk_Size;
     u32 *texture_buffer = mem_alloc_uninit (u32, texture_size * texture_size, frame_allocator);
@@ -36,7 +36,9 @@ void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrai
             {
                 for_range (cz, 0, Chunk_Size)
                 {
-                    auto val = chunk->terrain_values[cx * Chunk_Size + cz].array[terrain_value];
+                    auto val = chunk->terrain_values[cx * Chunk_Size + cz].noise_values[terrain_value];
+                    if (with_bezier_modifier)
+                        val *= chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[terrain_value];
 
                     u8 color_comp = cast (u8) (val * 255);
                     texture_buffer[(tex_y + cz) * texture_size + tex_x + cx] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
@@ -239,8 +241,9 @@ void ui_show_terrain_noise_maps (bool generate = false)
     static const f32 Scale = 2;
 
     static int size = 8;
+    static bool with_bezier_modifier = true;
 
-    int lines = 2;
+    int lines = 3;
     auto child_height = ImGui::GetContentRegionAvail ().y - lines * ImGui::GetFrameHeightWithSpacing ();
     if (ImGui::BeginChild ("Noise Maps", {0, child_height}, true, ImGuiWindowFlags_HorizontalScrollbar))
     {
@@ -258,6 +261,8 @@ void ui_show_terrain_noise_maps (bool generate = false)
         ImGui::Text ("Peaks And Valleys");
         ImGui::Image (cast (ImTextureID) peaks_and_valleys_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
+
+        ImGui::Columns ();
     }
     ImGui::EndChild ();
 
@@ -267,6 +272,9 @@ void ui_show_terrain_noise_maps (bool generate = false)
     if (ImGui::SliderInt ("Size", &size, 1, 100))
         generate = true;
 
+    if (ImGui::Checkbox ("With Bezier Modifier", &with_bezier_modifier))
+        generate = true;
+
     if (ImGui::Button ("Generate"))
         generate = true;
 
@@ -274,15 +282,15 @@ void ui_show_terrain_noise_maps (bool generate = false)
     {
         generate_terrain_value_texture (&continentalness_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Continentalness);
+            size, Terrain_Value_Continentalness, with_bezier_modifier);
 
         generate_terrain_value_texture (&erosion_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Erosion);
+            size, Terrain_Value_Erosion, with_bezier_modifier);
 
         generate_terrain_value_texture (&peaks_and_valleys_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Peaks_And_Valleys);
+            size, Terrain_Value_Peaks_And_Valleys, with_bezier_modifier);
     }
 }
 

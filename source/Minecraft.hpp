@@ -156,9 +156,20 @@ static const int Chunk_Height = 384;
 
 static const int Terrain_Curves_Max_Points = ImGuiExt_BezierCurve_PointCountFromCurveCount (10);
 
-static const Perlin_Fractal_Params Default_Continentalness_Params = { 0.012, 3, 0.5, 1.5 };
-static const Perlin_Fractal_Params Default_Erosion_Params = { 0.012, 3, 0.5, 1.5 };
-static const Perlin_Fractal_Params Default_Peaks_And_Valleys_Params = { 0.012, 3, 0.5, 1.5 };
+// The bezier points need to be a #define because we can't assign fixed arrays
+
+#define Default_Continentalness_Bezier_Points {{0,0}, {0,0.5}, {0.5, 1}, {1, 1}}
+static const int Default_Continentalness_Bezier_Count = 4;
+
+#define Default_Erosion_Bezier_Points {{0,0}, {0,0.5}, {0.5, 1}, {1, 1}}
+static const int Default_Erosion_Bezier_Count = 4;
+
+#define Default_Peaks_And_Valleys_Bezier_Points {{0,0}, {0,0.5}, {0.5, 1}, {1, 1}}
+static const int Default_Peaks_And_Valleys_Bezier_Count = 4;
+
+static const Perlin_Fractal_Params Default_Continentalness_Perlin_Params = { 0.012, 3, 0.5, 1.5 };
+static const Perlin_Fractal_Params Default_Erosion_Perlin_Params = { 0.012, 3, 0.5, 1.5 };
+static const Perlin_Fractal_Params Default_Peaks_And_Valleys_Perlin_Params = { 0.012, 3, 0.5, 1.5 };
 
 static const f64 Surface_Scale = 0.0172;
 static const f64 Surface_Height_Threshold = 20;
@@ -172,29 +183,43 @@ enum Terrain_Value
     Terrain_Value_Peaks_And_Valleys,
 };
 
-union Terrain_Values
+struct Terrain_Values
 {
-    struct
+    union
     {
-        f32 continentalness;
-        f32 erosion;
-        f32 peaks_and_valleys;
+        struct
+        {
+            f32 continentalness_noise;
+            f32 erosion_noise;
+            f32 peaks_and_valleys_noise;
+        };
+        f32 noise_values[3];
     };
-    f32 array[3];
+
+    union
+    {
+        struct
+        {
+            f32 continentalness_bezier;
+            f32 erosion_bezier;
+            f32 peaks_and_valleys_bezier;
+        };
+        f32 bezier_values[3];
+    };
 };
 
 struct Terrain_Params
 {
-    Vec2f continentalness_bezier_points[Terrain_Curves_Max_Points];
-    int continentalness_bezier_point_count;
-    Vec2f erosion_bezier_points[Terrain_Curves_Max_Points];
-    int erosion_bezier_point_count;
-    Vec2f peaks_and_valleys_bezier_points[Terrain_Curves_Max_Points];
-    int peaks_and_valleys_bezier_point_count;
+    Vec2f continentalness_bezier_points[Terrain_Curves_Max_Points] = Default_Continentalness_Bezier_Points;
+    int continentalness_bezier_point_count = Default_Continentalness_Bezier_Count;
+    Vec2f erosion_bezier_points[Terrain_Curves_Max_Points] = Default_Erosion_Bezier_Points;
+    int erosion_bezier_point_count = Default_Erosion_Bezier_Count;
+    Vec2f peaks_and_valleys_bezier_points[Terrain_Curves_Max_Points] = Default_Peaks_And_Valleys_Bezier_Points;
+    int peaks_and_valleys_bezier_point_count = Default_Peaks_And_Valleys_Bezier_Count;
 
-    Perlin_Fractal_Params continentalness_perlin = Default_Continentalness_Params;
-    Perlin_Fractal_Params erosion_perlin = Default_Erosion_Params;
-    Perlin_Fractal_Params peaks_and_valleys_perlin = Default_Peaks_And_Valleys_Params;
+    Perlin_Fractal_Params continentalness_perlin = Default_Continentalness_Perlin_Params;
+    Perlin_Fractal_Params erosion_perlin = Default_Erosion_Perlin_Params;
+    Perlin_Fractal_Params peaks_and_valleys_perlin = Default_Peaks_And_Valleys_Perlin_Params;
 };
 
 struct Chunk

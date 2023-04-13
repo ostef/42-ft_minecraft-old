@@ -120,14 +120,30 @@ void chunk_generate (World *world, Chunk *chunk)
             f64 perlin_z = cast (f64) (z + chunk->z * Chunk_Size);
 
             auto values = &chunk->terrain_values[x * Chunk_Size + z];
-            values->continentalness = perlin_fractal_noise (world->terrain_params.continentalness_perlin, world->continentalness_offsets, perlin_x, perlin_z);
-            values->continentalness = inverse_lerp (-continentalness_max, continentalness_max, values->continentalness);
+            values->continentalness_noise = perlin_fractal_noise (world->terrain_params.continentalness_perlin, world->continentalness_offsets, perlin_x, perlin_z);
+            values->continentalness_noise = inverse_lerp (-continentalness_max, continentalness_max, values->continentalness_noise);
 
-            values->erosion = perlin_fractal_noise (world->terrain_params.erosion_perlin, world->erosion_offsets, perlin_x, perlin_z);
-            values->erosion = inverse_lerp (-erosion_max, erosion_max, values->erosion);
+            values->continentalness_bezier = bezier_cubic_calculate (
+                world->terrain_params.continentalness_bezier_point_count,
+                world->terrain_params.continentalness_bezier_points,
+                values->continentalness_noise).y;
 
-            values->peaks_and_valleys = perlin_fractal_noise (world->terrain_params.peaks_and_valleys_perlin, world->peaks_and_valleys_offsets, perlin_x, perlin_z);
-            values->peaks_and_valleys = inverse_lerp (-peaks_and_valleys_max, peaks_and_valleys_max, values->peaks_and_valleys);
+
+            values->erosion_noise = perlin_fractal_noise (world->terrain_params.erosion_perlin, world->erosion_offsets, perlin_x, perlin_z);
+            values->erosion_noise = inverse_lerp (-erosion_max, erosion_max, values->erosion_noise);
+
+            values->erosion_bezier = bezier_cubic_calculate (
+                world->terrain_params.erosion_bezier_point_count,
+                world->terrain_params.erosion_bezier_points,
+                values->erosion_noise).y;
+
+            values->peaks_and_valleys_noise = perlin_fractal_noise (world->terrain_params.peaks_and_valleys_perlin, world->peaks_and_valleys_offsets, perlin_x, perlin_z);
+            values->peaks_and_valleys_noise = inverse_lerp (-peaks_and_valleys_max, peaks_and_valleys_max, values->peaks_and_valleys_noise);
+
+            values->peaks_and_valleys_bezier = bezier_cubic_calculate (
+                world->terrain_params.peaks_and_valleys_bezier_point_count,
+                world->terrain_params.peaks_and_valleys_bezier_points,
+                values->peaks_and_valleys_noise).y;
         }
     }
 
