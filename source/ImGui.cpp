@@ -8,7 +8,7 @@ namespace ImGuiExt
 {
     static const float BezierCurveEditor_GrabRadius = 8;
 
-    bool BezierCurvePoint (ImGuiID id, const ImRect &bounds, ImVec2 *point)
+    bool BezierCurvePoint (ImGuiID id, const ImRect &bounds, ImVec2 *point, const ImVec2 &x_range, const ImVec2 &y_range)
     {
         ImVec2 point_center = bounds.Min + ImVec2{point->x, 1 - point->y} * (bounds.Max - bounds.Min);
 
@@ -23,7 +23,7 @@ namespace ImGuiExt
         ImGui::ButtonBehavior (box, id, &hovered, &held, ImGuiButtonFlags_NoNavFocus);
 
         if (hovered || held)
-            ImGui::SetTooltip ("(%4.3f %4.3f)", point->x, point->y);
+            ImGui::SetTooltip ("(%4.3f %4.3f)", ImLerp (x_range.x, x_range.y, point->x), ImLerp (y_range.x, y_range.y, point->y));
 
         if (held)
         {
@@ -77,7 +77,8 @@ namespace ImGuiExt
         *control_point_count -= 3;
     }
 
-    bool BezierCurveEditor (const char *str_id, const ImVec2 &size, int max_control_points, int *control_point_count, ImVec2 *control_points)
+    bool BezierCurveEditor (const char *str_id, const ImVec2 &size, int max_control_points, int *control_point_count, ImVec2 *control_points,
+        const ImVec2 &x_range, const ImVec2 &y_range)
     {
         assert (max_control_points >= 4);
 
@@ -155,7 +156,7 @@ namespace ImGuiExt
                     relative_next_tang = control_points[i + 1] - control_points[i];
             }
 
-            if (BezierCurvePoint (window->GetID (i), bounds, &control_points[i]))
+            if (BezierCurvePoint (window->GetID (i), bounds, &control_points[i], x_range, y_range))
             {
                 point_modified = i;
                 modified = true;
@@ -220,9 +221,9 @@ namespace ImGuiExt
         {
             if (*control_point_count + 3 <= max_control_points)
             {
-                ImVec2 p = (ImGui::GetIO ().MousePos - bounds.Min) / size.x;
-                p.x = ImSaturate (p.x);
-                p.y = 1 - ImSaturate (p.y);
+                ImVec2 p = (ImGui::GetIO ().MousePos - bounds.Min);
+                p.x = ImSaturate (p.x / size.x);
+                p.y = 1 - ImSaturate (p.y / size.y);
 
                 BezierCurveInsertPoint (p, control_point_count, control_points);
                 modified = true;
@@ -266,45 +267,6 @@ namespace ImGuiExt
         }
 
         ImGui::EndChild ();
-
-        bool log = false;
-        if (ImGui::Button ("Copy to clipboard"))
-        {
-            ImGui::LogToClipboard ();
-            log = true;
-        }
-
-        ImGui::SameLine ();
-
-        if (ImGui::Button ("Log to TTY"))
-        {
-            ImGui::LogToTTY ();
-            log = true;
-        }
-
-        if (log)
-        {
-            ImGui::LogText ("{\n");
-            for (int i = 0; i < curve_count; i += 1)
-            {
-                ImGui::LogText ("    {%f, %f}, {%f, %f}, {%f, %f},\n",
-                    control_points[i * 3 + 0].x, control_points[i * 3 + 0].y,
-                    control_points[i * 3 + 1].x, control_points[i * 3 + 1].y,
-                    control_points[i * 3 + 2].x, control_points[i * 3 + 2].y
-                );
-            }
-
-            if (curve_count > 1)
-            {
-                ImGui::LogText ("    {%f, %f},\n",
-                    control_points[*control_point_count - 1].x, control_points[*control_point_count - 1].y
-                );
-            }
-
-            ImGui::LogText ("}");
-
-            ImGui::LogFinish ();
-        }
 
         ImGui::PopID ();
 

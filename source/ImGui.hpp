@@ -52,5 +52,6 @@ namespace ImGuiExt
     #define ImGuiExt_BezierCurve_PointCountFromCurveCount(n) (3 * (n) + 1)
     #define ImGuiExt_BezierCurve_CurveCountFromPointCount(n) (((n) - 1) / 3)
 
-    bool BezierCurveEditor (const char *label, const ImVec2 &size, int maxControlPoints, int *controlPointCount, ImVec2 *controlPoints);
+    bool BezierCurveEditor (const char *label, const ImVec2 &size, int maxControlPoints, int *controlPointCount, ImVec2 *controlPoints,
+        const ImVec2 &x_range = {0,1}, const ImVec2 &y_range = {0,1});
 }
