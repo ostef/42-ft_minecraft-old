@@ -171,10 +171,12 @@ int main (int argc, const char **args)
 
     IMGUI_CHECKVERSION ();
     ImGui::CreateContext ();
-    auto io = ImGui::GetIO ();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    io.Fonts->AddFontFromFileTTF ("data/Roboto-Regular.ttf", 18);
+    auto io = &ImGui::GetIO ();
+    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io->Fonts->AddFontFromFileTTF ("data/Roboto-Regular.ttf", 18);
 
     ImGui::StyleColorsDark ();
     {
@@ -287,22 +289,37 @@ int main (int argc, const char **args)
             }
         }
 
-        ImGui_ImplOpenGL3_NewFrame ();
-        ImGui_ImplGlfw_NewFrame ();
-        ImGui::NewFrame ();
-
-        if (g_show_ui)
-            ui_show_windows ();
-
         int width, height;
         glfwGetFramebufferSize (g_window, &width, &height);
+
+            ImGui_ImplOpenGL3_NewFrame ();
+            ImGui_ImplGlfw_NewFrame ();
+            ImGui::NewFrame ();
+
+        if (g_show_ui)
+        {
+            ImGui::DockSpaceOverViewport (null, ImGuiDockNodeFlags_PassthruCentralNode);
+
+            ui_show_windows ();
+        }
+
         glViewport (0, 0, width, height);
         glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         world_draw_chunks (&g_world, &g_camera);
 
         ImGui::Render ();
+
         ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());
+
+        auto io = ImGui::GetIO ();
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            auto backup_current_context = glfwGetCurrentContext ();
+            ImGui::UpdatePlatformWindows ();
+            ImGui::RenderPlatformWindowsDefault ();
+            glfwMakeContextCurrent (backup_current_context);
+        }
 
         glfwSwapBuffers (g_window);
 
