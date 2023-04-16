@@ -526,6 +526,13 @@ void ui_show_terrain_creator_window (bool *opened)
             generate = true;
         }
 
+        if (ImGui::Button ("Generate World"))
+        {
+            generate = true;
+            world_clear_chunks (&g_world);
+            world_init (&g_world, seed, g_render_distance / 2 + 1, params);
+        }
+
         if (generate)
         {
             u32 *pixels = mem_alloc_uninit (u32, size * size, heap_allocator ());
