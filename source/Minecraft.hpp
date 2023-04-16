@@ -58,6 +58,7 @@ f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistanc
 f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f64 y);
 f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistance, f64 lacunarity, f64 x, f64 y, f64 z);
 f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f64 y, f64 z);
+void perlin_generate_offsets (LC_RNG *rng, int count, Vec2f *offsets);
 
 inline
 static Vec2f bezier_cubic_calculate (const Vec2f &p1, const Vec2f &p2, const Vec2f &p3, const Vec2f &p4, f32 t)

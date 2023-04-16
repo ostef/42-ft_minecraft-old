@@ -243,3 +243,12 @@ f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f
 {
     return perlin_fractal_noise (params.scale, params.octaves, offsets, params.persistance, params.lacunarity, x, y, z);
 }
+
+void perlin_generate_offsets (LC_RNG *rng, int count, Vec2f *offsets)
+{
+    for_range (i, 0, count)
+    {
+        offsets[i].x = random_rangef (rng, -10000, 10000);
+        offsets[i].y = random_rangef (rng, -10000, 10000);
+    }
+}
