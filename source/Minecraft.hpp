@@ -141,6 +141,7 @@ enum Block_Type : u8
     Block_Type_Dirt,
     Block_Type_Stone,
     Block_Type_Bedrock,
+    Block_Type_Water,
 
     Block_Type_Count,
 };

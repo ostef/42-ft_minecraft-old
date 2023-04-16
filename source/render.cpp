@@ -149,6 +149,11 @@ bool load_texture_atlas (const char *textures_dirname)
         "dirt.png",
         "stone.png",
         "bedrock.png",
+        "water.png",
+        "five.png",
+        "six.png",
+        "seven.png",
+        "eight.png",
     };
 
     static const int Texture_Count = array_size (Texture_Names);
@@ -159,6 +164,8 @@ bool load_texture_atlas (const char *textures_dirname)
     g_texture_atlas_size = Atlas_Cell_Size * atlas_cell_count;
     u32 *atlas_data = mem_alloc_typed (u32, g_texture_atlas_size * g_texture_atlas_size, heap_allocator ());
     defer (mem_free (atlas_data, heap_allocator ()));
+
+    println ("Texture atlas size: %i cells, %i x %i pixels", atlas_cell_count, g_texture_atlas_size, g_texture_atlas_size);
 
     for_range (i, 0, Texture_Count)
     {
@@ -197,6 +204,8 @@ bool load_texture_atlas (const char *textures_dirname)
     glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, g_texture_atlas_size, g_texture_atlas_size, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas_data);
     glBindTexture (GL_TEXTURE_2D, 0);
 
