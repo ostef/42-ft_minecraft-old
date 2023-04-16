@@ -12,8 +12,20 @@ layout (location = 1) in int a_Face;
 layout (location = 2) in int a_Block_Id;
 layout (location = 3) in int a_Block_Corner;
 
-const int Atlas_Cell_Size = 18;
-const int Atlas_Cell_Size_No_Border = Atlas_Cell_Size - 2;
+const int Atlas_Cell_Size_No_Border = 16;
+const int Atlas_Cell_Size = Atlas_Cell_Size_No_Border + 2;
+
+const int Block_Face_East  = 0; // +X
+const int Block_Face_West  = 1; // -X
+const int Block_Face_Above = 2; // +Y
+const int Block_Face_Below = 3; // -Y
+const int Block_Face_North = 4; // +Z
+const int Block_Face_South = 5; // -Z
+
+const int Block_Corner_Top_Left     = 0;
+const int Block_Corner_Top_Right    = 1;
+const int Block_Corner_Bottom_Left  = 2;
+const int Block_Corner_Bottom_Right = 3;
 
 out vec3 Normal;
 out vec2 Tex_Coords;
@@ -27,30 +39,30 @@ void main ()
 
     switch (a_Face)
     {
-    case 0: Normal = vec3 ( 1, 0, 0); break;
-    case 1: Normal = vec3 (-1, 0, 0); break;
-    case 2: Normal = vec3 (0,  1, 0); break;
-    case 3: Normal = vec3 (0, -1, 0); break;
-    case 4: Normal = vec3 (0, 0,  1); break;
-    case 5: Normal = vec3 (0, 0, -1); break;
+    case Block_Face_East:  Normal = vec3 ( 1, 0, 0); break;
+    case Block_Face_West:  Normal = vec3 (-1, 0, 0); break;
+    case Block_Face_Above: Normal = vec3 (0,  1, 0); break;
+    case Block_Face_Below: Normal = vec3 (0, -1, 0); break;
+    case Block_Face_North: Normal = vec3 (0, 0,  1); break;
+    case Block_Face_South: Normal = vec3 (0, 0, -1); break;
     }
 
     int atlas_size = textureSize (u_Texture_Atlas, 0).x / Atlas_Cell_Size;    // Assume width == height
     int atlas_cell_x = a_Block_Id % atlas_size;
     int atlas_cell_y = a_Block_Id / atlas_size;
     int atlas_tex_x = atlas_cell_x * Atlas_Cell_Size + 1;
-    int atlas_tex_y = atlas_cell_y * Atlas_Cell_Size - 1;
+    int atlas_tex_y = atlas_cell_y * Atlas_Cell_Size + 1;
 
     switch (a_Block_Corner)
     {
-    case 0: break;
-    case 1: atlas_tex_x += Atlas_Cell_Size_No_Border; break;
-    case 2: atlas_tex_y -= Atlas_Cell_Size_No_Border; break;
-    case 3: atlas_tex_x += Atlas_Cell_Size_No_Border; atlas_tex_y -= Atlas_Cell_Size_No_Border; break;
+    case Block_Corner_Top_Left:     break;
+    case Block_Corner_Top_Right:    atlas_tex_x += Atlas_Cell_Size_No_Border; break;
+    case Block_Corner_Bottom_Left:  atlas_tex_y += Atlas_Cell_Size_No_Border; break;
+    case Block_Corner_Bottom_Right: atlas_tex_x += Atlas_Cell_Size_No_Border; atlas_tex_y += Atlas_Cell_Size_No_Border; break;
     }
 
     Tex_Coords.x = float (atlas_tex_x) / float (atlas_size * Atlas_Cell_Size);
-    Tex_Coords.y = 1 - float (atlas_tex_y) / float (atlas_size * Atlas_Cell_Size);
+    Tex_Coords.y = float (atlas_tex_y) / float (atlas_size * Atlas_Cell_Size);
 }
 )""";
 
