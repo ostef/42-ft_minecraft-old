@@ -483,8 +483,162 @@ void ui_show_world_window (bool *opened)
     ImGui::End ();
 }
 
+void ui_show_terrain_creator_window (bool *opened)
+{
+    static Terrain_Params params;
+    static int size = 1000;
+    static GLuint texture;
+    static ImVec4 water_color = {0.2,0.3,0.6,1.0};
+    static ImVec4 dirt_color = {0.6,0.4,0.2,1.0};
+    static f32 global_scale = 1.0;
+    static int seed = 127384;
+    static bool show_c = true;
+    static bool show_e = true;
+    static bool show_pv = true;
+    static bool show_colors = true;
+
+    if (ImGui::Begin ("Terrain Creator", opened))
+    {
+        ui_show_terrain_params_editor (&params);
+        ImGui::Separator ();
+        ImGui::ColorEdit3 ("Water Color", &water_color.x);
+        ImGui::ColorEdit3 ("Dirt Color", &dirt_color.x);
+        ImGui::SliderInt ("Size", &size, 128, 10000);
+        ImGui::SliderFloat ("Global Scale", &global_scale, 0.1, 5.0);
+
+        ImGui::Checkbox ("Show Continentalness", &show_c);
+        ImGui::Checkbox ("Show Erosion", &show_e);
+        ImGui::Checkbox ("Show Peaks and Valleys", &show_pv);
+        ImGui::Checkbox ("Show Colors", &show_colors);
+
+        bool generate = false;
+
+        if (ImGui::Button ("Generate New"))
+        {
+            seed = random_get_s32 ();
+            generate = true;
+        }
+
+        ImGui::SameLine ();
+
+        if (ImGui::Button ("Regenerate"))
+        {
+            generate = true;
+        }
+
+        if (generate)
+        {
+            u32 *pixels = mem_alloc_uninit (u32, size * size, heap_allocator ());
+            defer (mem_free (pixels, heap_allocator ()));
+
+            LC_RNG rng;
+            random_seed (&rng, seed);
+
+            Vec2f coffsets[Perlin_Fractal_Max_Octaves];
+            perlin_generate_offsets (&rng, params.perlin_params[0].octaves, coffsets);
+
+            Vec2f eoffsets[Perlin_Fractal_Max_Octaves];
+            perlin_generate_offsets (&rng, params.perlin_params[1].octaves, eoffsets);
+
+            Vec2f pvoffsets[Perlin_Fractal_Max_Octaves];
+            perlin_generate_offsets (&rng, params.perlin_params[1].octaves, pvoffsets);
+
+            f32 cmax = perlin_fractal_max (params.perlin_params[0].octaves, params.perlin_params[0].persistance);
+            f32 emax = perlin_fractal_max (params.perlin_params[1].octaves, params.perlin_params[1].persistance);
+            f32 pvmax = perlin_fractal_max (params.perlin_params[2].octaves, params.perlin_params[2].persistance);
+            for_range (x, 0, size)
+            {
+                for_range (y, 0, size)
+                {
+                    f32 perlin_x = cast (f32) x * global_scale;
+                    f32 perlin_y = cast (f32) y * global_scale;
+
+                    f32 normalized_surface_level = 1;
+                    if (show_c)
+                    {
+                        auto cnoise = cast (f32) perlin_fractal_noise (params.perlin_params[0], coffsets, cast (f32) perlin_x, cast (f32) perlin_y);
+                        cnoise = inverse_lerp (-cmax, cmax, cnoise);
+                        normalized_surface_level *= bezier_cubic_calculate (params.bezier_point_counts[0], params.bezier_points[0], cnoise).y;
+                    }
+                    if (show_e)
+                    {
+                        auto enoise = cast (f32) perlin_fractal_noise (params.perlin_params[1], eoffsets, cast (f32) perlin_x, cast (f32) perlin_y);
+                        enoise = inverse_lerp (-emax, emax, enoise);
+                        normalized_surface_level *= bezier_cubic_calculate (params.bezier_point_counts[1], params.bezier_points[1], enoise).y;
+                    }
+                    if (show_pv)
+                    {
+                        auto pvnoise = cast (f32) perlin_fractal_noise (params.perlin_params[2], pvoffsets, cast (f32) perlin_x, cast (f32) perlin_y);
+                        pvnoise = inverse_lerp (-pvmax, pvmax, pvnoise);
+                        normalized_surface_level *= bezier_cubic_calculate (params.bezier_point_counts[2], params.bezier_points[2], pvnoise).y;
+                    }
+
+                    auto surface_level = lerp (
+                        cast (f32) params.height_range.x,
+                        cast (f32) params.height_range.y,
+                        normalized_surface_level
+                    );
+
+                    ImVec4 color;
+                    if (show_colors)
+                    {
+                        if (surface_level <= params.water_level)
+                        {
+                            color = water_color;
+                            f32 depth = inverse_lerp (cast (f32) params.height_range.x, cast (f32) params.water_level, surface_level);
+                            depth = max (depth, 0.2f);
+                            color.x *= depth;
+                            color.y *= depth;
+                            color.z *= depth;
+                        }
+                        else
+                        {
+                            color = dirt_color;
+                            f32 depth = inverse_lerp (cast (f32) params.water_level, cast (f32) params.water_level + 20, surface_level);
+                            depth = clamp (depth, 0.2f, 1.0f);
+                            color.x *= depth;
+                            color.y *= depth;
+                            color.z *= depth;
+                        }
+                    }
+                    else
+                    {
+                        color = ImVec4{normalized_surface_level, normalized_surface_level, normalized_surface_level, 1.0};
+                    }
+
+                    u32 ucolor = ImGui::ColorConvertFloat4ToU32 (color);
+                    pixels[y * size + x] = ucolor;
+                }
+            }
+
+            if (!texture)
+                glGenTextures (1, &texture);
+            glBindTexture (GL_TEXTURE_2D, texture);
+            glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            glBindTexture (GL_TEXTURE_2D, 0);
+        }
+    }
+    ImGui::End ();
+
+    if (*opened)
+    {
+        if (ImGui::Begin ("Terrain Texture"))
+        {
+            ImVec2 texture_size;
+            texture_size.x = ImGui::GetContentRegionAvail ().x;
+            texture_size.y = texture_size.x;
+            ImGui::Image (cast (ImTextureID) texture, texture_size);
+        }
+        ImGui::End ();
+    }
+}
+
 void ui_show_windows ()
 {
+    static bool show_terrain_creator = true;
+
     if (ImGui::BeginMainMenuBar ())
     {
         if (ImGui::Button ("Demo Window"))
@@ -497,6 +651,10 @@ void ui_show_windows ()
             g_show_texture_atlas_window = true;
         if (ImGui::Button ("World Window"))
             g_show_world_window = true;
+        if (ImGui::Button ("Terrain Noise Maps Window"))
+            g_show_terrain_noise_maps_window = true;
+        if (ImGui::Button ("Terrain Creator Window"))
+            show_terrain_creator = true;
 
         ImGui::EndMainMenuBar ();
     }
@@ -524,4 +682,7 @@ void ui_show_windows ()
         }
         ImGui::End ();
     }
+
+    if (show_terrain_creator)
+        ui_show_terrain_creator_window (&show_terrain_creator);
 }
