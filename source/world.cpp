@@ -128,7 +128,6 @@ void chunk_generate (World *world, Chunk *chunk)
                 world->terrain_params.continentalness_bezier_points,
                 values->continentalness_noise).y;
 
-
             values->erosion_noise = perlin_fractal_noise (world->terrain_params.erosion_perlin, world->erosion_offsets, perlin_x, perlin_z);
             values->erosion_noise = inverse_lerp (-erosion_max, erosion_max, values->erosion_noise);
 
@@ -162,24 +161,34 @@ void chunk_generate (World *world, Chunk *chunk)
 
                 s64 index = chunk_block_index (i, j, k);
 
-                if (y > Surface_Level)
-                {
-                    chunk->blocks[index].type = Block_Type_Air;
-                }
-                else if (y > Surface_Level - Surface_Height_Threshold)
-                {
-                    chunk->blocks[index].type = Block_Type_Dirt;
-                }
-                else if (j == 0)
+                auto terrain_values = &chunk->terrain_values[i * Chunk_Size + k];
+                auto surface_level = lerp (
+                    cast (f32) world->terrain_params.height_range.x,
+                    cast (f32) world->terrain_params.height_range.y,
+                    terrain_values->continentalness_bezier *  terrain_values->erosion_bezier * terrain_values->peaks_and_valleys_bezier
+                );
+
+                if (j == 0)
                 {
                     chunk->blocks[index].type = Block_Type_Bedrock;
                 }
+                else if (y > surface_level)
+                {
+                    if (y <= world->terrain_params.water_level)
+                        chunk->blocks[index].type = Block_Type_Water;
+                    else
+                        chunk->blocks[index].type = Block_Type_Air;
+                }
+                else if (y > surface_level - Surface_Dirt_Height)
+                {
+                    chunk->blocks[index].type = Block_Type_Dirt;
+                }
                 else
                 {
-                    auto val = perlin_noise (perlin_x * Cavern_Scale, perlin_y * Cavern_Scale, perlin_z * Cavern_Scale);
-                    if (val < 0.2)
-                        chunk->blocks[index].type = Block_Type_Air;
-                    else
+                    //auto val = perlin_noise (perlin_x * Cavern_Scale, perlin_y * Cavern_Scale, perlin_z * Cavern_Scale);
+                    //if (val < 0.2)
+                    //    chunk->blocks[index].type = Block_Type_Air;
+                    //else
                         chunk->blocks[index].type = Block_Type_Stone;
                 }
             }

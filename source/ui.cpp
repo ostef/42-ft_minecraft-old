@@ -5,9 +5,13 @@ static bool g_show_metrics_window;
 static bool g_show_perlin_test_window;
 static bool g_show_texture_atlas_window;
 static bool g_show_world_window;
+static bool g_show_terrain_noise_maps_window;
 
-void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrain_Value terrain_value, bool with_bezier_modifier)
+void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrain_Value terrain_value, bool only_noise)
 {
+    static const Vec4f Block_Color_Water = {0.2, 0.3, 0.6, 1.0};
+    static const Vec4f Block_Color_Dirt = {0.4, 0.4, 0.2, 1.0};
+
     int texture_size = size * Chunk_Size;
     u32 *texture_buffer = mem_alloc_uninit (u32, texture_size * texture_size, frame_allocator);
 
@@ -16,7 +20,7 @@ void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrai
         for_range (j, 0, size)
         {
             s64 tex_x = i * Chunk_Size;
-            s64 tex_y = j * Chunk_Size;
+            s64 tex_y = (size - j - 1) * Chunk_Size;
 
             auto chunk = world_get_chunk (&g_world, x + i - size / 2, z + j - size / 2);
             if (!chunk)
@@ -36,12 +40,45 @@ void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrai
             {
                 for_range (cz, 0, Chunk_Size)
                 {
-                    auto val = chunk->terrain_values[cx * Chunk_Size + cz].noise_values[terrain_value];
-                    if (with_bezier_modifier)
-                        val *= chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[terrain_value];
+                    if (terrain_value == Terrain_Value_Count)
+                    {
+                        f32 val;
+                        Vec4f color = Block_Color_Water;
+                        if (only_noise)
+                        {
+                            val = chunk->terrain_values[cx * Chunk_Size + cz].noise_values[0]
+                                * chunk->terrain_values[cx * Chunk_Size + cz].noise_values[1]
+                                * chunk->terrain_values[cx * Chunk_Size + cz].noise_values[2];
+                        }
+                        else
+                        {
+                            val = chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[0]
+                                * chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[1]
+                                * chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[2];
+                        }
 
-                    u8 color_comp = cast (u8) (val * 255);
-                    texture_buffer[(tex_y + cz) * texture_size + tex_x + cx] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
+                        f32 surface_level = lerp (cast (f32) g_world.terrain_params.height_range.x, cast (f32) g_world.terrain_params.height_range.y, val);
+                        if (surface_level > g_world.terrain_params.water_level)
+                        {
+                            color = Block_Color_Dirt * lerp (0.5f, 1.0f, val);
+                        }
+
+                        texture_buffer[(tex_y + Chunk_Size - cz - 1) * texture_size + tex_x + cx] = (0xff << 24) |
+                            (cast (u8) (color.b * 255) << 16) | (cast (u8) (color.g * 255) << 8) | (cast (u8) (color.r * 255) << 0);
+                    }
+                    else
+                    {
+                        f32 val;
+
+                        if (only_noise)
+                            val = chunk->terrain_values[cx * Chunk_Size + cz].noise_values[terrain_value];
+                        else
+                            val = chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[terrain_value];
+
+                        u8 color_comp = cast (u8) (val * 255);
+                        texture_buffer[(tex_y + Chunk_Size - cz - 1) * texture_size + tex_x + cx] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
+                    }
+
                 }
             }
         }
@@ -104,7 +141,7 @@ bool ui_show_perlin_fractal_params (ImGuiID id, Perlin_Fractal_Params *params)
     ImGui::PushID (id);
 
     bool result = false;
-    if (ImGui::SliderFloat ("Scale", &params->scale, 0.001, 0.2))
+    if (ImGui::SliderFloat ("Scale", &params->scale, 0.001, 0.2, "%.6f"))
         result = true;
     if (ImGui::SliderInt ("Octaves", &params->octaves, 1, Perlin_Fractal_Max_Octaves))
         result = true;
@@ -237,17 +274,18 @@ void ui_show_terrain_noise_maps (bool generate = false)
     static GLuint continentalness_tex;
     static GLuint erosion_tex;
     static GLuint peaks_and_valleys_tex;
+    static GLuint all_tex;
 
     static const f32 Scale = 2;
 
     static int size = 8;
-    static bool with_bezier_modifier = true;
+    static bool only_noise = false;
 
     int lines = 3;
     auto child_height = ImGui::GetContentRegionAvail ().y - lines * ImGui::GetFrameHeightWithSpacing ();
     if (ImGui::BeginChild ("Noise Maps", {0, child_height}, true, ImGuiWindowFlags_HorizontalScrollbar))
     {
-        int column_count = clamp (cast (int) (ImGui::GetContentRegionAvail ().x / (size * Chunk_Size * Scale)), 1, 3);
+        int column_count = clamp (cast (int) (ImGui::GetContentRegionAvail ().x / (size * Chunk_Size * Scale)), 1, 4);
         ImGui::Columns (column_count, 0, false);
 
         ImGui::Text ("Continentalness");
@@ -262,6 +300,10 @@ void ui_show_terrain_noise_maps (bool generate = false)
         ImGui::Image (cast (ImTextureID) peaks_and_valleys_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
 
+        ImGui::Text ("All");
+        ImGui::Image (cast (ImTextureID) all_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
+        ImGui::NextColumn ();
+
         ImGui::Columns ();
     }
     ImGui::EndChild ();
@@ -272,7 +314,7 @@ void ui_show_terrain_noise_maps (bool generate = false)
     if (ImGui::SliderInt ("Size", &size, 1, 100))
         generate = true;
 
-    if (ImGui::Checkbox ("With Bezier Modifier", &with_bezier_modifier))
+    if (ImGui::Checkbox ("Only Noise", &only_noise))
         generate = true;
 
     if (ImGui::Button ("Generate"))
@@ -282,108 +324,113 @@ void ui_show_terrain_noise_maps (bool generate = false)
     {
         generate_terrain_value_texture (&continentalness_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Continentalness, with_bezier_modifier);
+            size, Terrain_Value_Continentalness, only_noise);
 
         generate_terrain_value_texture (&erosion_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Erosion, with_bezier_modifier);
+            size, Terrain_Value_Erosion, only_noise);
 
         generate_terrain_value_texture (&peaks_and_valleys_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Peaks_And_Valleys, with_bezier_modifier);
+            size, Terrain_Value_Peaks_And_Valleys, only_noise);
+
+        generate_terrain_value_texture (&all_tex,
+            cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
+            size, Terrain_Value_Count, only_noise);
     }
+}
+
+void ui_show_terrain_params_editor (Terrain_Params *params)
+{
+    static const f32 Curve_Editor_Size_Ratio = 0.6;
+    static const char *Value_Names[] = {
+        "Continentalness",
+        "Erosion",
+        "Peaks and Valleys",
+    };
+
+    for_range (i, 0, 3)
+    {
+        if (ImGui::TreeNode (Value_Names[i]))
+        {
+            ImGui::Columns (2, 0, false);
+
+            ImVec2 size;
+            size.x = ImGui::GetContentRegionAvail ().x - ImGui::GetStyle ().WindowPadding.x;
+            size.y = size.x * Curve_Editor_Size_Ratio;
+            ImGuiExt::BezierCurveEditor ("Height Curve", size,
+                array_size (params->bezier_points[i]),
+                &params->bezier_point_counts[i],
+                cast (ImVec2 *) params->bezier_points[i],
+                ImVec2{0,1},
+                ImVec2{cast (f32) params->height_range.x, cast (f32) params->height_range.y}
+            );
+
+            {
+                ImGui::LogButtons ();
+
+                auto control_points = params->bezier_points[i];
+                int control_point_count = params->bezier_point_counts[i];
+                int curve_count = ImGuiExt_BezierCurve_CurveCountFromPointCount (control_point_count);
+
+                ImGui::LogText ("{\n");
+                for (int i = 0; i < curve_count; i += 1)
+                {
+                    ImGui::LogText ("    {%f, %f}, {%f, %f}, {%f, %f},\n",
+                        control_points[i * 3 + 0].x, control_points[i * 3 + 0].y,
+                        control_points[i * 3 + 1].x, control_points[i * 3 + 1].y,
+                        control_points[i * 3 + 2].x, control_points[i * 3 + 2].y
+                    );
+                }
+
+                ImGui::LogText ("    {%f, %f},\n",
+                    control_points[control_point_count - 1].x, control_points[control_point_count - 1].y
+                );
+
+                ImGui::LogText ("}");
+
+                ImGui::LogFinish ();
+            }
+
+            ImGui::NextColumn ();
+
+            ui_show_perlin_fractal_params (0, &params->perlin_params[i]);
+
+            {
+                ImGui::LogButtons ();
+
+                ImGui::LogText ("{ ");
+                ImGui::LogText ("%f, %i, %f, %f", params->perlin_params[i].scale, params->perlin_params[i].octaves,
+                    params->perlin_params[i].persistance, params->perlin_params[i].lacunarity);
+                ImGui::LogText (" }");
+
+                ImGui::LogFinish ();
+            }
+
+            if (ImGui::Button ("Default"))
+            {
+                memcpy (&params->bezier_points[i], Default_Bezier_Points[i], Default_Bezier_Point_Counts[i] * sizeof (Vec2f));
+                params->bezier_point_counts[i] = Default_Bezier_Point_Counts[i];
+                params->perlin_params[i] = Default_Perlin_Params[i];
+            }
+
+            ImGui::Columns ();
+
+            ImGui::TreePop ();
+        }
+    }
+
+    ImGui::SliderInt ("Min Height", &params->height_range.x, 0, params->height_range.y);
+    ImGui::SliderInt ("Max Height", &params->height_range.y, params->height_range.x, Chunk_Height);
+
+    ImGui::SliderInt ("Water Level", &params->water_level, 0, Chunk_Height);
 }
 
 void ui_show_advanced_world_settings ()
 {
-    static const f32 Curve_Editor_Size_Ratio = 0.6;
+    static Terrain_Params world_params;
 
-    if (ImGui::TreeNode ("Continentalness"))
-    {
-        ImGui::Columns (2, 0, false);
-
-        ImVec2 size;
-        size.x = ImGui::GetContentRegionAvail ().x - ImGui::GetStyle ().WindowPadding.x;
-        size.y = size.x * Curve_Editor_Size_Ratio;
-        ImGuiExt::BezierCurveEditor ("Height Curve", size,
-            array_size (g_world.terrain_params.continentalness_bezier_points),
-            &g_world.terrain_params.continentalness_bezier_point_count,
-            cast (ImVec2 *) g_world.terrain_params.continentalness_bezier_points
-        );
-
-        ImGui::NextColumn ();
-
-        ui_show_perlin_fractal_params (0, &g_world.terrain_params.continentalness_perlin);
-        if (ImGui::Button ("Default"))
-        {
-            Vec2f dummy[] = Default_Continentalness_Bezier_Points;
-            memcpy (&g_world.terrain_params.continentalness_bezier_points, dummy, sizeof (Vec2f) * Default_Continentalness_Bezier_Count);
-            g_world.terrain_params.continentalness_bezier_point_count = Default_Continentalness_Bezier_Count;
-            g_world.terrain_params.continentalness_perlin = Default_Continentalness_Perlin_Params;
-        }
-
-        ImGui::Columns ();
-
-        ImGui::TreePop ();
-    }
-
-    if (ImGui::TreeNode ("Erosion"))
-    {
-        ImGui::Columns (2, 0, false);
-
-        ImVec2 size;
-        size.x = ImGui::GetContentRegionAvail ().x - ImGui::GetStyle ().WindowPadding.x;
-        size.y = size.x * Curve_Editor_Size_Ratio;
-        ImGuiExt::BezierCurveEditor ("Height Curve", size,
-            array_size (g_world.terrain_params.erosion_bezier_points),
-            &g_world.terrain_params.erosion_bezier_point_count,
-            cast (ImVec2 *) g_world.terrain_params.erosion_bezier_points
-        );
-
-        ImGui::NextColumn ();
-
-        ui_show_perlin_fractal_params (1, &g_world.terrain_params.erosion_perlin);
-        if (ImGui::Button ("Default"))
-        {
-            Vec2f dummy[] = Default_Erosion_Bezier_Points;
-            memcpy (&g_world.terrain_params.erosion_bezier_points, dummy, sizeof (Vec2f) * Default_Erosion_Bezier_Count);
-            g_world.terrain_params.erosion_bezier_point_count = Default_Erosion_Bezier_Count;
-            g_world.terrain_params.erosion_perlin = Default_Erosion_Perlin_Params;
-        }
-
-        ImGui::Columns ();
-
-        ImGui::TreePop ();
-    }
-
-    if (ImGui::TreeNode ("Peaks And Valleys"))
-    {
-        ImGui::Columns (2, 0, false);
-
-        ImVec2 size;
-        size.x = ImGui::GetContentRegionAvail ().x - ImGui::GetStyle ().WindowPadding.x;
-        size.y = size.x * Curve_Editor_Size_Ratio;
-        ImGuiExt::BezierCurveEditor ("Height Curve", size,
-            array_size (g_world.terrain_params.peaks_and_valleys_bezier_points),
-            &g_world.terrain_params.peaks_and_valleys_bezier_point_count,
-            cast (ImVec2 *) g_world.terrain_params.peaks_and_valleys_bezier_points
-        );
-
-        ImGui::NextColumn ();
-
-        ui_show_perlin_fractal_params (2, &g_world.terrain_params.peaks_and_valleys_perlin);
-        if (ImGui::Button ("Default"))
-        {
-            Vec2f dummy[] = Default_Peaks_And_Valleys_Bezier_Points;
-            memcpy (&g_world.terrain_params.peaks_and_valleys_bezier_points, dummy, sizeof (Vec2f) * Default_Peaks_And_Valleys_Bezier_Count);
-            g_world.terrain_params.peaks_and_valleys_bezier_point_count = Default_Peaks_And_Valleys_Bezier_Count;
-            g_world.terrain_params.peaks_and_valleys_perlin = Default_Peaks_And_Valleys_Perlin_Params;
-        }
-
-        ImGui::Columns ();
-
-        ImGui::TreePop ();
-    }
+    ui_show_terrain_params_editor (&world_params);
 
     ImGui::Separator ();
 
@@ -392,7 +439,7 @@ void ui_show_advanced_world_settings ()
     if (ImGui::Button ("Generate New"))
     {
         world_clear_chunks (&g_world);
-        world_init (&g_world, random_get_s32 (), g_render_distance / 2 + 1, g_world.terrain_params);
+        world_init (&g_world, random_get_s32 (), g_render_distance / 2 + 1, world_params);
         generated = true;
     }
 
@@ -401,11 +448,9 @@ void ui_show_advanced_world_settings ()
     if (ImGui::Button ("Regenerate"))
     {
         world_clear_chunks (&g_world);
-        world_init (&g_world, g_world.seed, g_render_distance / 2 + 1, g_world.terrain_params);
+        world_init (&g_world, g_world.seed, g_render_distance / 2 + 1, world_params);
         generated = true;
     }
-
-    ui_show_terrain_noise_maps (generated);
 }
 
 void ui_show_world_window (bool *opened)
@@ -470,4 +515,13 @@ void ui_show_windows ()
 
     if (g_show_world_window)
         ui_show_world_window (&g_show_world_window);
+
+    if (g_show_terrain_noise_maps_window)
+    {
+        if (ImGui::Begin ("Terrain Noise Maps", &g_show_terrain_noise_maps_window))
+        {
+            ui_show_terrain_noise_maps (&g_show_world_window);
+        }
+        ImGui::End ();
+    }
 }

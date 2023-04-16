@@ -160,21 +160,73 @@ static const int Terrain_Curves_Max_Points = ImGuiExt_BezierCurve_PointCountFrom
 
 // The bezier points need to be a #define because we can't assign fixed arrays
 
-#define Default_Continentalness_Bezier_Points {{0,0}, {0,0.5}, {0.5, 1}, {1, 1}}
-static const int Default_Continentalness_Bezier_Count = 4;
+#define Default_Continentalness_Bezier_Points {\
+    {0.000000, 0.000000}, {0.043313, 0.003790}, {0.294532, -0.016243},\
+    {0.311857, 0.000000}, {0.329182, 0.016243}, {0.317271, 0.400830},\
+    {0.335679, 0.417073}, {0.354088, 0.433315}, {0.507851, 0.408049},\
+    {0.519762, 0.429706}, {0.531673, 0.451363}, {0.523010, 0.861036},\
+    {0.546833, 0.880888}, {0.570655, 0.900740}, {0.753655, 0.985562},\
+    {1.000000, 1.000000},\
+}
 
-#define Default_Erosion_Bezier_Points {{0,0}, {0,0.5}, {0.5, 1}, {1, 1}}
-static const int Default_Erosion_Bezier_Count = 4;
+static const int Default_Continentalness_Bezier_Count = 16;
 
-#define Default_Peaks_And_Valleys_Bezier_Points {{0,0}, {0,0.5}, {0.5, 1}, {1, 1}}
-static const int Default_Peaks_And_Valleys_Bezier_Count = 4;
+#define Default_Erosion_Bezier_Points {\
+    {0.000000, 1.000000}, {0.022740, 0.935030}, {0.055762, 0.836182},\
+    {0.070922, 0.816330}, {0.121815, 0.816330}, {0.198854, 0.510862},\
+    {0.234588, 0.516276}, {0.270322, 0.521690}, {0.278889, 0.663070},\
+    {0.306443, 0.689587}, {0.333997, 0.716104}, {0.410395, 0.155387},\
+    {0.430969, 0.139145}, {0.451543, 0.122902}, {0.708175, 0.121097},\
+    {0.737412, 0.126512}, {0.766649, 0.131926}, {0.760152, 0.399025},\
+    {0.777477, 0.406244}, {0.794802, 0.413463}, {0.834867, 0.417073},\
+    {0.847861, 0.406244}, {0.860855, 0.395416}, {0.870601, 0.128316},\
+    {0.896589, 0.122902}, {0.951814, 0.119293}, {0.922577, 0.054322},\
+    {1.000000, 0.048908},\
+}
 
-static const Perlin_Fractal_Params Default_Continentalness_Perlin_Params = { 0.012, 3, 0.5, 1.5 };
-static const Perlin_Fractal_Params Default_Erosion_Perlin_Params = { 0.012, 3, 0.5, 1.5 };
-static const Perlin_Fractal_Params Default_Peaks_And_Valleys_Perlin_Params = { 0.012, 3, 0.5, 1.5 };
+static const int Default_Erosion_Bezier_Count = 28;
+
+#define Default_Peaks_And_Valleys_Bezier_Points {\
+    {0.000000, 0.929078}, {0.082924, 0.878160}, {0.133115, 1.041826},\
+    {0.182215, 0.856338}, {0.231315, 0.670849}, {0.232406, 0.447172},\
+    {0.252046, 0.410802}, {0.377523, 0.416258}, {0.400000, 0.300000},\
+    {0.500000, -0.000000}, {0.600000, 0.300000}, {0.623022, 0.416258},\
+    {0.744135, 0.414439}, {0.771413, 0.447172}, {0.771413, 0.669031},\
+    {0.822695, 0.849063}, {0.873977, 1.029096}, {0.927441, 0.890889},\
+    {1.000000, 0.925441},\
+}
+
+static const int Default_Peaks_And_Valleys_Bezier_Count = 19;
+
+static const Vec2f Default_Bezier_Points[3][Terrain_Curves_Max_Points] = {
+    Default_Continentalness_Bezier_Points,
+    Default_Erosion_Bezier_Points,
+    Default_Peaks_And_Valleys_Bezier_Points,
+};
+
+static const int Default_Bezier_Point_Counts[3] = {
+    Default_Continentalness_Bezier_Count,
+    Default_Erosion_Bezier_Count,
+    Default_Peaks_And_Valleys_Bezier_Count,
+};
+
+static const Vec2i Default_Height_Range = {50,355};
+
+static const Perlin_Fractal_Params Default_Continentalness_Perlin_Params = { 0.001340, 3, 0.25, 1.3 };
+static const Perlin_Fractal_Params Default_Erosion_Perlin_Params = { 0.002589, 5, 0.5, 1.5 };
+static const Perlin_Fractal_Params Default_Peaks_And_Valleys_Perlin_Params = { 0.033, 3, 0.5, 1.8 };
+
+static const Perlin_Fractal_Params Default_Perlin_Params[3] = {
+    Default_Continentalness_Perlin_Params,
+    Default_Erosion_Perlin_Params,
+    Default_Peaks_And_Valleys_Perlin_Params,
+};
+
+static const int Default_Water_Level = 128;
 
 static const f64 Surface_Scale = 0.0172;
-static const f64 Surface_Height_Threshold = 20;
+static const f64 Surface_Height_Threshold = 50;
+static const f64 Surface_Dirt_Height = 8;
 static const f64 Surface_Level = 120;
 static const f64 Cavern_Scale = 0.05674;
 
@@ -183,6 +235,7 @@ enum Terrain_Value
     Terrain_Value_Continentalness,
     Terrain_Value_Erosion,
     Terrain_Value_Peaks_And_Valleys,
+    Terrain_Value_Count,
 };
 
 struct Terrain_Values
@@ -212,16 +265,53 @@ struct Terrain_Values
 
 struct Terrain_Params
 {
-    Vec2f continentalness_bezier_points[Terrain_Curves_Max_Points] = Default_Continentalness_Bezier_Points;
-    int continentalness_bezier_point_count = Default_Continentalness_Bezier_Count;
-    Vec2f erosion_bezier_points[Terrain_Curves_Max_Points] = Default_Erosion_Bezier_Points;
-    int erosion_bezier_point_count = Default_Erosion_Bezier_Count;
-    Vec2f peaks_and_valleys_bezier_points[Terrain_Curves_Max_Points] = Default_Peaks_And_Valleys_Bezier_Points;
-    int peaks_and_valleys_bezier_point_count = Default_Peaks_And_Valleys_Bezier_Count;
+    union
+    {
+        Vec2f bezier_points[3][Terrain_Curves_Max_Points] = {
+            Default_Continentalness_Bezier_Points,
+            Default_Erosion_Bezier_Points,
+            Default_Peaks_And_Valleys_Bezier_Points,
+        };
+        struct
+        {
+            Vec2f continentalness_bezier_points[Terrain_Curves_Max_Points];
+            Vec2f erosion_bezier_points[Terrain_Curves_Max_Points];
+            Vec2f peaks_and_valleys_bezier_points[Terrain_Curves_Max_Points];
+        };
+    };
 
-    Perlin_Fractal_Params continentalness_perlin = Default_Continentalness_Perlin_Params;
-    Perlin_Fractal_Params erosion_perlin = Default_Erosion_Perlin_Params;
-    Perlin_Fractal_Params peaks_and_valleys_perlin = Default_Peaks_And_Valleys_Perlin_Params;
+    union
+    {
+        int bezier_point_counts[3] = {
+            Default_Continentalness_Bezier_Count,
+            Default_Erosion_Bezier_Count,
+            Default_Peaks_And_Valleys_Bezier_Count,
+        };
+        struct
+        {
+            int continentalness_bezier_point_count;
+            int erosion_bezier_point_count;
+            int peaks_and_valleys_bezier_point_count;
+        };
+    };
+
+    union
+    {
+        Perlin_Fractal_Params perlin_params[3] = {
+            Default_Continentalness_Perlin_Params,
+            Default_Erosion_Perlin_Params,
+            Default_Peaks_And_Valleys_Perlin_Params
+        };
+        struct
+        {
+            Perlin_Fractal_Params continentalness_perlin;
+            Perlin_Fractal_Params erosion_perlin;
+            Perlin_Fractal_Params peaks_and_valleys_perlin;
+        };
+    };
+
+    Vec2i height_range = Default_Height_Range;
+    int water_level = Default_Water_Level;
 };
 
 struct Chunk
