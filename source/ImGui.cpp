@@ -83,8 +83,50 @@ namespace ImGuiExt
         assert (max_control_points >= 4);
 
         auto style = ImGui::GetStyle ();
+        bool modified = false;
+
+        // Ensure there is at least two points
+        if (*control_point_count < 4)
+        {
+            control_points[0] = {0, 0};
+            control_points[1] = {0, 0.7};
+            control_points[2] = {0.3, 1};
+            control_points[3] = {1, 1};
+            *control_point_count = 4;
+
+            modified = true;
+        }
 
         ImGui::PushID (str_id);
+
+        if (ImGui::Button ("Mirror X"))
+        {
+            for (int i = 0; i < *control_point_count / 2; i += 1)
+            {
+                auto p = control_points[i];
+                p.x = 1 - p.x;
+
+                control_points[i] = control_points[*control_point_count - i - 1];
+                control_points[i].x = 1 - control_points[i].x;
+                control_points[*control_point_count - i - 1] = p;
+            }
+
+            if (*control_point_count % 2 != 0)
+                control_points[*control_point_count / 2].x = 1 - control_points[*control_point_count / 2].x;
+
+            modified = true;
+        }
+
+        ImGui::SameLine ();
+
+        if (ImGui::Button ("Mirror Y"))
+        {
+            for (int i = 0; i < *control_point_count; i += 1)
+            {
+                control_points[i].y = 1 - control_points[i].y;
+            }
+            modified = true;
+        }
 
         if (!ImGui::BeginChild (str_id, size + style.WindowPadding * 2, true))
         {
@@ -101,21 +143,6 @@ namespace ImGuiExt
         ImRect bounds;
         bounds.Min = ImGui::GetCursorScreenPos ();
         bounds.Max = bounds.Min + size;
-
-        bool hovered = false;
-        bool modified = false;
-
-        // Ensure there is at least two points
-        if (*control_point_count < 4)
-        {
-            control_points[0] = {0, 0};
-            control_points[1] = {0, 0.7};
-            control_points[2] = {0.3, 1};
-            control_points[3] = {1, 1};
-            *control_point_count = 4;
-
-            modified = true;
-        }
 
         // Draw Grid
         static const int GridSize = 10;
@@ -256,6 +283,7 @@ namespace ImGuiExt
                 + ImVec2{control_points[i].x * size.x, (1 - control_points[i].y) * size.y};
 
             ImU32 color;
+            ImU32 border_color;
             if (point_modified == i)
                 color = ImGui::GetColorU32 (ImGuiCol_ButtonActive);
             else if (point_hovered == i)
@@ -264,6 +292,8 @@ namespace ImGuiExt
                 color = ImGui::GetColorU32 (ImGuiCol_Button);
 
             draw_list->AddCircleFilled (p, BezierCurveEditor_GrabRadius, color);
+            if (style.FrameBorderSize > 0)
+                draw_list->AddCircle (p, BezierCurveEditor_GrabRadius, ImGui::GetColorU32 (ImGuiCol_Border), 0, style.FrameBorderSize);
         }
 
         ImGui::EndChild ();
