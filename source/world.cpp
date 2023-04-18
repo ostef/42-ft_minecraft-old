@@ -162,10 +162,13 @@ void chunk_generate (World *world, Chunk *chunk)
                 s64 index = chunk_block_index (i, j, k);
 
                 auto terrain_values = &chunk->terrain_values[i * Chunk_Size + k];
-                auto surface_level = lerp (
+                f32 surface_level = (terrain_values->bezier_values[0] * world->terrain_params.influences[0]
+                    + terrain_values->bezier_values[1] * world->terrain_params.influences[1]
+                    + terrain_values->bezier_values[2] * world->terrain_params.influences[2]) / 3;
+                surface_level = lerp (
                     cast (f32) world->terrain_params.height_range.x,
                     cast (f32) world->terrain_params.height_range.y,
-                    terrain_values->continentalness_bezier *  terrain_values->erosion_bezier * terrain_values->peaks_and_valleys_bezier
+                    surface_level
                 );
 
                 if (j == 0)
@@ -450,7 +453,6 @@ Chunk *world_create_chunk (World *world, s64 x, s64 z)
         return chunk;
 
     chunk = mem_alloc_uninit (Chunk, 1, heap_allocator ());
-    println ("[WORLD] Created new chunk at %lld %lld", x, z);
     chunk_init (chunk, x, z);
     chunk->east  = world_get_chunk (world, x + 1, z);
     chunk->west  = world_get_chunk (world, x - 1, z);

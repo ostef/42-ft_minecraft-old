@@ -210,6 +210,12 @@ static const int Default_Bezier_Point_Counts[3] = {
     Default_Peaks_And_Valleys_Bezier_Count,
 };
 
+static const f32 Default_Influences[3] = {
+    1.0f,
+    0.6f,
+    0.7f,
+};
+
 static const Vec2i Default_Height_Range = {50,355};
 
 static const Perlin_Fractal_Params Default_Continentalness_Perlin_Params = { 0.001340, 3, 0.25, 1.3 };
@@ -293,6 +299,12 @@ struct Terrain_Params
             int erosion_bezier_point_count;
             int peaks_and_valleys_bezier_point_count;
         };
+    };
+
+    f32 influences[3] = {
+        Default_Influences[0],
+        Default_Influences[1],
+        Default_Influences[2],
     };
 
     union
