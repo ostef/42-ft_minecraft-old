@@ -96,9 +96,12 @@ void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrai
 
 void generate_noise_texture (GLuint *tex,
     int width, int height, f64 offset_x, f64 offset_y,
-    int seed, f64 scale, int octaves, f64 persistance, f64 lacunarity)
+    int seed, f64 scale, int octaves, f64 persistance, f64 lacunarity,
+    f32 *out_min = null, f32 *out_max = null)
 {
     Vec2f offsets[Perlin_Fractal_Max_Octaves];
+    f32 min_non_normalized = F32_MAX;
+    f32 max_non_normalized = -F32_MAX;
 
     octaves = clamp (octaves, 1, Perlin_Fractal_Max_Octaves);
 
@@ -120,11 +123,20 @@ void generate_noise_texture (GLuint *tex,
         {
             auto val = perlin_fractal_noise (scale, octaves, offsets, persistance, lacunarity, x + offset_x, y + offset_y);
             val = inverse_lerp (-max_val, max_val, val);
+            if (val < min_non_normalized)
+                min_non_normalized = val;
+            if (val > max_non_normalized)
+                max_non_normalized = val;
 
             u8 color_comp = cast (u8) (val * 255);
             texture_buffer[y * height + x] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
         }
     }
+
+    if (out_min)
+        *out_min = min_non_normalized;
+    if (out_max)
+        *out_max = max_non_normalized;
 
     if (!*tex)
         glGenTextures (1, tex);
@@ -162,6 +174,8 @@ void ui_show_perlin_test_window (bool *opened)
     static int seed;
     static f32 offset_x, offset_y;
     static Perlin_Fractal_Params params = {0.05, 3, 0.5, 1.5};
+    static f32 min_value = F32_MAX;
+    static f32 max_value = -F32_MAX;
 
     if (ImGui::Begin ("Perlin Test", opened))
     {
@@ -180,6 +194,9 @@ void ui_show_perlin_test_window (bool *opened)
 
         if (!texture_handle)
             should_generate = true;
+
+        ImGui::LabelText ("Min Value", "%.3f", min_value);
+        ImGui::LabelText ("Max Value", "%.3f", max_value);
 
         if (ImGui::SliderInt ("Size", &texture_size, 128, 4096))
             should_generate = true;
@@ -205,8 +222,9 @@ void ui_show_perlin_test_window (bool *opened)
 
         if (should_generate)
         {
-            generate_noise_texture (&texture_handle, texture_size, texture_size, offset_x, offset_y, seed, params.scale, params.octaves, params.persistance, params.lacunarity);
+            generate_noise_texture (&texture_handle, texture_size, texture_size, offset_x, offset_y, seed, params.scale, params.octaves, params.persistance, params.lacunarity, &min_value, &max_value);
         }
+
     }
     ImGui::End ();
 }
@@ -395,6 +413,7 @@ void ui_show_terrain_params_editor (Terrain_Params *params)
             ImGui::NextColumn ();
 
             ui_show_perlin_fractal_params (0, &params->perlin_params[i]);
+            ImGui::SliderFloat ("Influence", &params->influences[i], 0.0f, 1.0f);
 
             {
                 ImGui::LogButtons ();
@@ -496,6 +515,7 @@ void ui_show_terrain_creator_window (bool *opened)
     static bool show_e = true;
     static bool show_pv = true;
     static bool show_colors = true;
+    static Terrain_Values *values;
 
     if (ImGui::Begin ("Terrain Creator", opened))
     {
@@ -512,6 +532,9 @@ void ui_show_terrain_creator_window (bool *opened)
         ImGui::Checkbox ("Show Colors", &show_colors);
 
         bool generate = false;
+
+        if (!values)
+            generate = true;
 
         if (ImGui::Button ("Generate New"))
         {
@@ -535,6 +558,9 @@ void ui_show_terrain_creator_window (bool *opened)
 
         if (generate)
         {
+            mem_free (values, heap_allocator ());
+            values = mem_alloc_uninit (Terrain_Values, size * size, heap_allocator ());
+
             u32 *pixels = mem_alloc_uninit (u32, size * size, heap_allocator ());
             defer (mem_free (pixels, heap_allocator ()));
 
@@ -557,28 +583,54 @@ void ui_show_terrain_creator_window (bool *opened)
             {
                 for_range (y, 0, size)
                 {
+                    auto val = &values[x * size + y];
+
                     f32 perlin_x = cast (f32) x * global_scale;
                     f32 perlin_y = cast (f32) y * global_scale;
 
-                    f32 normalized_surface_level = 1;
+                    f32 normalized_surface_level = 0.0;
+                    f32 div = 0.0;
                     if (show_c)
                     {
                         auto cnoise = cast (f32) perlin_fractal_noise (params.perlin_params[0], coffsets, cast (f32) perlin_x, cast (f32) perlin_y);
                         cnoise = inverse_lerp (-cmax, cmax, cnoise);
-                        normalized_surface_level *= bezier_cubic_calculate (params.bezier_point_counts[0], params.bezier_points[0], cnoise).y;
+
+                        val->continentalness_noise = cnoise;
+
+                        val->continentalness_bezier = bezier_cubic_calculate (params.bezier_point_counts[0], params.bezier_points[0], cnoise).y * params.influences[0];
+
+                        normalized_surface_level += val->continentalness_bezier;
+
+                        div += 1;
                     }
                     if (show_e)
                     {
                         auto enoise = cast (f32) perlin_fractal_noise (params.perlin_params[1], eoffsets, cast (f32) perlin_x, cast (f32) perlin_y);
                         enoise = inverse_lerp (-emax, emax, enoise);
-                        normalized_surface_level *= bezier_cubic_calculate (params.bezier_point_counts[1], params.bezier_points[1], enoise).y;
+
+                        val->erosion_noise = enoise;
+
+                        val->erosion_bezier = bezier_cubic_calculate (params.bezier_point_counts[1], params.bezier_points[1], enoise).y * params.influences[1];
+
+                        normalized_surface_level += val->erosion_bezier;
+
+                        div += 1;
                     }
                     if (show_pv)
                     {
                         auto pvnoise = cast (f32) perlin_fractal_noise (params.perlin_params[2], pvoffsets, cast (f32) perlin_x, cast (f32) perlin_y);
                         pvnoise = inverse_lerp (-pvmax, pvmax, pvnoise);
-                        normalized_surface_level *= bezier_cubic_calculate (params.bezier_point_counts[2], params.bezier_points[2], pvnoise).y;
+
+                        val->peaks_and_valleys_noise = pvnoise;
+
+                        val->peaks_and_valleys_bezier = bezier_cubic_calculate (params.bezier_point_counts[2], params.bezier_points[2], pvnoise).y * params.influences[2];
+
+                        normalized_surface_level += val->peaks_and_valleys_bezier;
+
+                        div += 1;
                     }
+
+                    normalized_surface_level /= div;
 
                     auto surface_level = lerp (
                         cast (f32) params.height_range.x,
@@ -601,8 +653,8 @@ void ui_show_terrain_creator_window (bool *opened)
                         else
                         {
                             color = dirt_color;
-                            f32 depth = inverse_lerp (cast (f32) params.water_level, cast (f32) params.water_level + 20, surface_level);
-                            depth = clamp (depth, 0.2f, 1.0f);
+                            f32 depth = inverse_lerp (cast (f32) params.water_level, cast (f32) params.height_range.y, surface_level);
+                            depth = clamp (depth, 0.3f, 1.0f);
                             color.x *= depth;
                             color.y *= depth;
                             color.z *= depth;
@@ -636,7 +688,22 @@ void ui_show_terrain_creator_window (bool *opened)
             ImVec2 texture_size;
             texture_size.x = ImGui::GetContentRegionAvail ().x;
             texture_size.y = texture_size.x;
+
+            auto top_left = ImGui::GetCursorScreenPos ();
             ImGui::Image (cast (ImTextureID) texture, texture_size);
+            if (ImGui::IsItemHovered ())
+            {
+                ImVec2 pos_in_tex = ImGui::GetMousePos () - top_left;
+                pos_in_tex.y -= ImGui::GetScrollX ();
+                pos_in_tex.x = pos_in_tex.x / texture_size.x * size;
+                pos_in_tex.y = pos_in_tex.y / texture_size.y * size;
+
+                auto val = values[cast (int) pos_in_tex.x * size + cast (int) pos_in_tex.y];
+
+                ImGui::SetTooltip ("%f %f\nC: %.3f E: %.3f PV: %.3f",
+                    pos_in_tex.x, pos_in_tex.y,
+                    val.bezier_values[0], val.bezier_values[1], val.bezier_values[2]);
+            }
         }
         ImGui::End ();
     }
