@@ -69,7 +69,11 @@ cl %compiler_options% -c "source\Minecraft.cpp"
 
 if %errorlevel% neq 0 goto error
 
-cl %compiler_flags% Minecraft.obj Core.obj ImGui.obj gl.obj /link %linker_options% -OUT:%output_name%
+cl %compiler_options% /D_WIN32 -c "source\Cubiomes.cpp"
+
+if %errorlevel% neq 0 goto error
+
+cl %compiler_flags% Minecraft.obj Core.obj Cubiomes.obj ImGui.obj gl.obj /link %linker_options% -OUT:%output_name%
 
 if %errorlevel% neq 0 goto error
 
