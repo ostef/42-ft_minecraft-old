@@ -9,8 +9,8 @@ static bool g_show_terrain_noise_maps_window;
 
 void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrain_Value terrain_value, bool only_noise)
 {
-    static const Vec4f Block_Color_Water = {0.2, 0.3, 0.6, 1.0};
-    static const Vec4f Block_Color_Dirt = {0.4, 0.4, 0.2, 1.0};
+    static const ImVec4 Block_Color_Water = {0.2, 0.3, 0.6, 1.0};
+    static const ImVec4 Block_Color_Dirt = {0.4, 0.4, 0.2, 1.0};
 
     int texture_size = size * Chunk_Size;
     u32 *texture_buffer = mem_alloc_uninit (u32, texture_size * texture_size, frame_allocator);
@@ -42,29 +42,16 @@ void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrai
                 {
                     if (terrain_value == Terrain_Value_Count)
                     {
-                        f32 val;
-                        Vec4f color = Block_Color_Water;
-                        if (only_noise)
+                        ImVec4 color = Block_Color_Water;
+                        f32 val = chunk->terrain_values[cx * Chunk_Size + cz].surface_level;
+                        f32 normalized_val = val / cast (f32) Chunk_Height;
+
+                        if (val > g_world.terrain_params.water_level)
                         {
-                            val = chunk->terrain_values[cx * Chunk_Size + cz].noise_values[0]
-                                * chunk->terrain_values[cx * Chunk_Size + cz].noise_values[1]
-                                * chunk->terrain_values[cx * Chunk_Size + cz].noise_values[2];
-                        }
-                        else
-                        {
-                            val = chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[0]
-                                * chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[1]
-                                * chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[2];
+                            color = ImVec4{normalized_val,normalized_val,normalized_val,1};
                         }
 
-                        f32 surface_level = lerp (cast (f32) g_world.terrain_params.height_range.x, cast (f32) g_world.terrain_params.height_range.y, val);
-                        if (surface_level > g_world.terrain_params.water_level)
-                        {
-                            color = Block_Color_Dirt * lerp (0.5f, 1.0f, val);
-                        }
-
-                        texture_buffer[(tex_y + Chunk_Size - cz - 1) * texture_size + tex_x + cx] = (0xff << 24) |
-                            (cast (u8) (color.b * 255) << 16) | (cast (u8) (color.g * 255) << 8) | (cast (u8) (color.r * 255) << 0);
+                        texture_buffer[(tex_y + Chunk_Size - cz - 1) * texture_size + tex_x + cx] = ImGui::ColorConvertFloat4ToU32 (color);
                     }
                     else
                     {
@@ -292,9 +279,9 @@ void ui_show_terrain_noise_maps (bool generate = false)
     static GLuint continentalness_tex;
     static GLuint erosion_tex;
     static GLuint peaks_and_valleys_tex;
-    static GLuint all_tex;
+    static GLuint height_tex;
 
-    static const f32 Scale = 2;
+    static const f32 Scale = 1;
 
     static int size = 8;
     static bool only_noise = false;
@@ -306,6 +293,7 @@ void ui_show_terrain_noise_maps (bool generate = false)
         int column_count = clamp (cast (int) (ImGui::GetContentRegionAvail ().x / (size * Chunk_Size * Scale)), 1, 4);
         ImGui::Columns (column_count, 0, false);
 
+        /*
         ImGui::Text ("Continentalness");
         ImGui::Image (cast (ImTextureID) continentalness_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
@@ -317,9 +305,41 @@ void ui_show_terrain_noise_maps (bool generate = false)
         ImGui::Text ("Peaks And Valleys");
         ImGui::Image (cast (ImTextureID) peaks_and_valleys_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
+        */
 
-        ImGui::Text ("All");
-        ImGui::Image (cast (ImTextureID) all_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
+        ImGui::Text ("Height");
+
+        ImVec2 texture_size;
+        texture_size.x = size * Chunk_Size * Scale;
+        texture_size.y = texture_size.x;
+
+        auto top_left = ImGui::GetCursorScreenPos ();
+
+        ImGui::Image (cast (ImTextureID) height_tex, texture_size);
+
+        if (ImGui::IsItemHovered ())
+        {
+            ImVec2 pos_in_tex = ImGui::GetMousePos () - top_left;
+            pos_in_tex.y -= ImGui::GetScrollX ();
+            pos_in_tex.x = pos_in_tex.x / texture_size.x * size * Chunk_Size;
+            pos_in_tex.y = pos_in_tex.y / texture_size.y * size * Chunk_Size;
+
+            f32 val = 0;
+            int x = cast (int) (g_camera.position.x + pos_in_tex.x - Chunk_Size * size / 2);
+            int z = cast (int) (g_camera.position.z + pos_in_tex.y - Chunk_Size * size / 2);
+            auto chunk_x = x / Chunk_Size;
+            auto chunk_z = z / Chunk_Size;
+            auto chunk = world_get_chunk (&g_world, chunk_x, chunk_z);
+            if (chunk)
+            {
+                int rel_x = x - chunk_x * Chunk_Size;
+                int rel_z = z - chunk_z * Chunk_Size;
+                val = chunk->terrain_values[rel_x * Chunk_Size + rel_z].surface_level;
+            }
+
+            ImGui::SetTooltip ("%d %d\n%f", x, z, val);
+        }
+
         ImGui::NextColumn ();
 
         ImGui::Columns ();
@@ -340,19 +360,7 @@ void ui_show_terrain_noise_maps (bool generate = false)
 
     if (generate)
     {
-        generate_terrain_value_texture (&continentalness_tex,
-            cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Continentalness, only_noise);
-
-        generate_terrain_value_texture (&erosion_tex,
-            cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Erosion, only_noise);
-
-        generate_terrain_value_texture (&peaks_and_valleys_tex,
-            cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Peaks_And_Valleys, only_noise);
-
-        generate_terrain_value_texture (&all_tex,
+        generate_terrain_value_texture (&height_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
             size, Terrain_Value_Count, only_noise);
     }
@@ -621,7 +629,7 @@ void ui_show_terrain_creator_window (bool *opened)
                         auto pvnoise = cast (f32) perlin_fractal_noise (params.perlin_params[2], pvoffsets, cast (f32) perlin_x, cast (f32) perlin_y);
                         pvnoise = inverse_lerp (-pvmax, pvmax, pvnoise);
 
-                        val->peaks_and_valleys_noise = pvnoise;
+                        val->peaks_and_valleys_noise = -3 * (fabs (fabs (pvnoise) - 0.6666667f) - 0.3333334f);
 
                         val->peaks_and_valleys_bezier = bezier_cubic_calculate (params.bezier_point_counts[2], params.bezier_points[2], pvnoise).y * params.influences[2];
 

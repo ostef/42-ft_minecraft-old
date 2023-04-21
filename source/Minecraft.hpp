@@ -5,6 +5,7 @@
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <cubiomes/generator.h>
 
 // We need to define IM_ASSERT otherwise ImGui will overwrite
 // our own with assert from ucrt/assert.h
@@ -267,6 +268,8 @@ struct Terrain_Values
         };
         f32 bezier_values[3];
     };
+
+    f32 surface_level;
 };
 
 struct Terrain_Params
@@ -351,6 +354,7 @@ struct World
 {
     s32 seed;
 
+    Generator cubiome_gen;
     Terrain_Params terrain_params;
 
     Vec2f continentalness_offsets[Perlin_Fractal_Max_Octaves];
@@ -365,6 +369,7 @@ extern World g_world;
 
 void chunk_init (Chunk *chunk, s64 x, s64 z);
 void chunk_cleanup (Chunk *chunk);
+Vec2i chunk_absolute_to_relative_coordinates (Chunk *chunk, s64 x, s64 z);
 Chunk *chunk_get_at_relative_coordinates (Chunk *chunk, s64 x, s64 y, s64 z);
 Block chunk_get_block_in_chunk (Chunk *chunk, s64 x, s64 y, s64 z);
 Block chunk_get_block (Chunk *chunk, s64 x, s64 y, s64 z);

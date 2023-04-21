@@ -37,6 +37,11 @@ void chunk_cleanup (Chunk *chunk)
     glDeleteBuffers (1, &chunk->gl_vbo);
 }
 
+Vec2i chunk_absolute_to_relative_coordinates (Chunk *chunk, s64 x, s64 z)
+{
+    return {cast (int) (x - chunk->x * Chunk_Size), cast (int) (z - chunk->z * Chunk_Size)};
+}
+
 Chunk *chunk_get_at_relative_coordinates (Chunk *chunk, s64 *x, s64 *z)
 {
     while (chunk && *x < 0)
@@ -95,7 +100,66 @@ Block chunk_get_block (Chunk *chunk, s64 x, s64 y, s64 z)
     return chunk_get_block_in_chunk (chunk, x, y, z);
 }
 
-void chunk_generate (World *world, Chunk *chunk)
+void chunk_generate_cubiome (World *world, Chunk *chunk)
+{
+    if (chunk->generated)
+        return;
+
+    defer (chunk->generated = true);
+
+    for_range (x, 0, Chunk_Size)
+    {
+        for_range (z, 0, Chunk_Size)
+        {
+            int sample_x = x + chunk->x * Chunk_Size;
+            int sample_z = z + chunk->z * Chunk_Size;
+
+            auto values = &chunk->terrain_values[x * Chunk_Size + z];
+            s64 np[6];
+            sampleBiomeNoise (&world->cubiome_gen.bn, np, sample_x, 0, sample_z, null, 0);
+            values->surface_level = 64 + np[NP_DEPTH] / 76.0;
+        }
+    }
+
+    for_range (i, 0, Chunk_Size)
+    {
+        for_range (j, 0, Chunk_Height)
+        {
+            for_range (k, 0, Chunk_Size)
+            {
+                f64 x = cast (f64) (chunk->x * Chunk_Size + i);
+                f64 y = cast (f64) j;
+                f64 z = cast (f64) (chunk->z * Chunk_Size + k);
+
+                s64 index = chunk_block_index (i, j, k);
+
+                f32 surface_level = chunk->terrain_values[i * Chunk_Size + k].surface_level;
+
+                if (j == 0)
+                {
+                    chunk->blocks[index].type = Block_Type_Bedrock;
+                }
+                else if (y > surface_level)
+                {
+                    if (y <= world->terrain_params.water_level)
+                        chunk->blocks[index].type = Block_Type_Water;
+                    else
+                        chunk->blocks[index].type = Block_Type_Air;
+                }
+                else if (y > surface_level - Surface_Dirt_Height)
+                {
+                    chunk->blocks[index].type = Block_Type_Dirt;
+                }
+                else
+                {
+                    chunk->blocks[index].type = Block_Type_Stone;
+                }
+            }
+        }
+    }
+}
+
+void chunk_generate_mine (World *world, Chunk *chunk)
 {
     if (chunk->generated)
         return;
@@ -197,6 +261,11 @@ void chunk_generate (World *world, Chunk *chunk)
             }
         }
     }
+}
+
+void chunk_generate (World *world, Chunk *chunk)
+{
+    chunk_generate_cubiome (world, chunk);
 }
 
 void push_block (Array<Vertex> *vertices, u8 id, const Vec3f &position, Block_Face_Flags visible_faces)
@@ -397,6 +466,8 @@ void world_init (World *world, s32 seed, int chunks_to_pre_generate, Terrain_Par
 
     world->seed = seed;
     world->terrain_params = terrain_params;
+    setupGenerator (&world->cubiome_gen, MC_1_20, 0);
+    applySeed (&world->cubiome_gen, DIM_OVERWORLD, seed);
 
     LC_RNG rng;
     random_seed (&rng, seed);
