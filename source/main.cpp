@@ -302,6 +302,23 @@ int main (int argc, const char **args)
 
             ui_show_windows ();
         }
+        else
+        {
+            auto viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->WorkPos);
+            ImGui::SetNextWindowSize(viewport->WorkSize);
+            ImGui::SetNextWindowViewport(viewport->ID);
+
+            ImGuiWindowFlags host_window_flags = 0;
+            host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
+            host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+            host_window_flags |= ImGuiWindowFlags_NoBackground;
+            if (ImGui::Begin ("##overlay", null, host_window_flags))
+            {
+                ImGui::Text ("%.0f %.0f %.0f", g_camera.position.x, g_camera.position.y, g_camera.position.z);
+            }
+            ImGui::End ();
+        }
 
         glViewport (0, 0, width, height);
         glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
