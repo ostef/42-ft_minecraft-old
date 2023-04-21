@@ -709,26 +709,92 @@ void ui_show_terrain_creator_window (bool *opened)
     }
 }
 
+void ui_show_cubiomes_viewer (bool *opened)
+{
+    static GLuint texture;
+    static Generator gen;
+    static int size = 4096;
+    static int seed = 218936743;
+    static int noise_map_type = 0;
+
+    if (ImGui::Begin ("Cubiomes Viewer", opened))
+    {
+        bool generate = false;
+
+        if (!texture)
+        {
+            glGenTextures (1, &texture);
+            setupGenerator (&gen, MC_1_20, 0);
+            applySeed (&gen, DIM_OVERWORLD, seed);
+            generate = true;
+        }
+
+        int lines = 3;
+        auto child_height = ImGui::GetContentRegionAvail ().y - lines * ImGui::GetFrameHeightWithSpacing ();
+        if (ImGui::BeginChild ("Noise Map", {0, child_height}, true, ImGuiWindowFlags_HorizontalScrollbar))
+        {
+            ImGui::Image (cast (ImTextureID) texture, ImVec2{cast (f32) size, cast (f32) size});
+        }
+        ImGui::EndChild ();
+
+        ImGui::SliderInt ("Size", &size, 128, 8192);
+
+        if (ImGui::Combo ("Noise Map", &noise_map_type, "Temperature\0Humidity\0Continentalness\0Erosion\0Depth\0Weirdness\0"))
+            generate = true;
+
+        if (ImGui::Button ("Generate"))
+            generate = true;
+
+        if (generate)
+        {
+            u32 *pixels = mem_alloc_uninit (u32, size * size, heap_allocator ());
+            defer (mem_free (pixels, heap_allocator ()));
+
+            setClimateParaSeed (&gen.bn, gen.seed, 0, noise_map_type, 4);
+
+            for (int j = 0; j < size; j += 1)
+            {
+                for (int i = 0; i < size; i += 1)
+                {
+                    float y = sampleClimatePara (&gen.bn, null, cast (f64) i, cast (f64) j);
+
+                    pixels[j * size + i] = ImGui::ColorConvertFloat4ToU32 (ImVec4{y, y, y, 1});
+                }
+            }
+
+            glBindTexture (GL_TEXTURE_2D, texture);
+            glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            glBindTexture (GL_TEXTURE_2D, 0);
+        }
+    }
+    ImGui::End ();
+}
+
 void ui_show_windows ()
 {
-    static bool show_terrain_creator = true;
+    static bool show_terrain_creator = false;
+    static bool show_cubiomes_viewer = false;
 
     if (ImGui::BeginMainMenuBar ())
     {
         if (ImGui::Button ("Demo Window"))
             g_show_demo_window = true;
-        if (ImGui::Button ("Metrics and Settings Window"))
+        if (ImGui::Button ("Metrics and Settings"))
             g_show_metrics_window = true;
-        if (ImGui::Button ("Perlin Test Window"))
+        if (ImGui::Button ("Perlin Test"))
             g_show_perlin_test_window = true;
-        if (ImGui::Button ("Texture Atlas Window"))
+        if (ImGui::Button ("Texture Atlas"))
             g_show_texture_atlas_window = true;
-        if (ImGui::Button ("World Window"))
+        if (ImGui::Button ("World Settings"))
             g_show_world_window = true;
-        if (ImGui::Button ("Terrain Noise Maps Window"))
+        if (ImGui::Button ("Terrain Noise Maps"))
             g_show_terrain_noise_maps_window = true;
-        if (ImGui::Button ("Terrain Creator Window"))
+        if (ImGui::Button ("Terrain Creator"))
             show_terrain_creator = true;
+        if (ImGui::Button ("Cubiomes Viewer"))
+            show_cubiomes_viewer = true;
 
         ImGui::EndMainMenuBar ();
     }
@@ -759,4 +825,7 @@ void ui_show_windows ()
 
     if (show_terrain_creator)
         ui_show_terrain_creator_window (&show_terrain_creator);
+
+    if (show_cubiomes_viewer)
+        ui_show_cubiomes_viewer (&show_cubiomes_viewer);
 }
