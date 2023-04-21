@@ -229,7 +229,7 @@ static const Perlin_Fractal_Params Default_Perlin_Params[3] = {
     Default_Peaks_And_Valleys_Perlin_Params,
 };
 
-static const int Default_Water_Level = 128;
+static const int Default_Water_Level = 126;
 
 static const f64 Surface_Scale = 0.0172;
 static const f64 Surface_Height_Threshold = 50;
