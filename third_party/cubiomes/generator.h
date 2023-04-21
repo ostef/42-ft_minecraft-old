@@ -3,6 +3,9 @@
 
 #include "layers.h"
 
+namespace cubiome
+{
+
 // generator flags
 enum
 {
@@ -138,6 +141,8 @@ int mapApproxHeight(float *y, int *ids, const Generator *g,
 #ifdef __cplusplus
 }
 #endif
+
+}
 
 #endif /* GENERATOR_H_ */
 

@@ -6,6 +6,8 @@
 #include <string.h>
 #include <math.h>
 
+namespace cubiome
+{
 
 int mapOceanMixMod(const Layer * l, int * out, int x, int z, int w, int h)
 {
@@ -756,8 +758,5 @@ int mapApproxHeight(float *y, int *ids, const Generator *g, const SurfaceNoise *
     return 0;
 }
 
-
-
-
-
+}
 

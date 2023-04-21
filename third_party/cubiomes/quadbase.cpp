@@ -42,6 +42,8 @@ typedef pthread_t       thread_id_t;
 
 // TODO: accurate seed testers for two or three structures in range
 
+namespace cubiome
+{
 
 static int blocksInRange(Pos *p, int n, int x, int z, int ax, int az, double rsq)
 {
@@ -636,4 +638,4 @@ int scanForQuads(
     return cnt;
 }
 
-
+}

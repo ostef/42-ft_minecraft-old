@@ -10,6 +10,9 @@
 // Essentials
 //==============================================================================
 
+namespace cubiome
+{
+
 int biomeExists(int mc, int id)
 {
     if (mc >= MC_1_18)
@@ -4175,5 +4178,5 @@ void voronoiAccess3D(uint64_t sha, int x, int y, int z, int *x4, int *y4, int *z
     if (z4) *z4 = az;
 }
 
-
+}
 

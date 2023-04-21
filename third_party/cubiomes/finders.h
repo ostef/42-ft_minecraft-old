@@ -4,6 +4,8 @@
 
 #include "generator.h"
 
+namespace cubiome
+{
 
 #ifdef __cplusplus
 extern "C"
@@ -753,6 +755,8 @@ Pos getLargeStructurePos(StructureConfig config, uint64_t seed, int regX, int re
 #ifdef __cplusplus
 }
 #endif
+
+}
 
 #endif // FINDERS_H_
 

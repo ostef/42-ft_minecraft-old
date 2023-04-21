@@ -4,6 +4,9 @@
 
 #include <stdint.h>
 
+namespace cubiome
+{
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -54,5 +57,7 @@ int savePPM(const char* path, const unsigned char *pixels,
 #ifdef __cplusplus
 }
 #endif
+
+}
 
 #endif

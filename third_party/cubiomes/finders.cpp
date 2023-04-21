@@ -16,6 +16,8 @@
 // Finding Structure Positions
 //==============================================================================
 
+namespace cubiome
+{
 
 void setAttemptSeed(uint64_t *s, int cx, int cz)
 {
@@ -4879,4 +4881,4 @@ int getLargestRec(int match, const int *ids, int sx, int sz, Pos *p0, Pos *p1)
     return ret;
 }
 
-
+}

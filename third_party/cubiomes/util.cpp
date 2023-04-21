@@ -5,7 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-
+namespace cubiome
+{
 
 uint64_t *loadSavedSeeds(const char *fnam, uint64_t *scnt)
 {
@@ -535,4 +536,4 @@ int savePPM(const char *path, const unsigned char *pixels, const unsigned int sx
     return written != pixelsLen;
 }
 
-
+}

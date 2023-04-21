@@ -116,8 +116,8 @@ void chunk_generate_cubiome (World *world, Chunk *chunk)
 
             auto values = &chunk->terrain_values[x * Chunk_Size + z];
             s64 np[6];
-            sampleBiomeNoise (&world->cubiome_gen.bn, np, sample_x, 0, sample_z, null, 0);
-            values->surface_level = 64 + np[NP_DEPTH] / 76.0;
+            cubiome::sampleBiomeNoise (&world->cubiome_gen.bn, np, sample_x, 0, sample_z, null, 0);
+            values->surface_level = 64 + np[cubiome::NP_DEPTH] / 76.0;
         }
     }
 
@@ -466,8 +466,9 @@ void world_init (World *world, s32 seed, int chunks_to_pre_generate, Terrain_Par
 
     world->seed = seed;
     world->terrain_params = terrain_params;
-    setupGenerator (&world->cubiome_gen, MC_1_20, 0);
-    applySeed (&world->cubiome_gen, DIM_OVERWORLD, seed);
+    cubiome::setupGenerator (&world->cubiome_gen, cubiome::MC_1_20, 0);
+    cubiome::applySeed (&world->cubiome_gen, cubiome::DIM_OVERWORLD, seed);
+
 
     LC_RNG rng;
     random_seed (&rng, seed);

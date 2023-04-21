@@ -8,6 +8,9 @@
 #include <math.h>
 
 
+namespace cubiome
+{
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -514,6 +517,8 @@ float isQuadBaseLarge(const StructureConfig sconf, uint64_t seed,
 #ifdef __cplusplus
 }
 #endif
+
+}
 
 #endif // QUADBASE_H_
 

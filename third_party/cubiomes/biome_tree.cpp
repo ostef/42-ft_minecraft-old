@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdio.h>
 
+namespace cubiome
+{
 
 static const int32_t biome_param_18[][2] =
 {
@@ -8996,7 +8998,7 @@ static const uint64_t biome_tree_20[] =
 
 
 
-static const uint8_t biome_table_beta_1_7[64*64] = 
+static const uint8_t biome_table_beta_1_7[64*64] =
 {
     5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1,1,1,1,
@@ -9604,4 +9606,5 @@ int get_resulting_node(const struct _args *arg, int idx, int alt, uint64_t ds, i
 }
 #endif
 
+}
 

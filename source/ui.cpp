@@ -720,7 +720,7 @@ void ui_show_terrain_creator_window (bool *opened)
 void ui_show_cubiomes_viewer (bool *opened)
 {
     static GLuint texture;
-    static Generator gen;
+    static cubiome::Generator gen;
     static int size = 4096;
     static int seed = 218936743;
     static int noise_map_type = 0;
@@ -732,8 +732,8 @@ void ui_show_cubiomes_viewer (bool *opened)
         if (!texture)
         {
             glGenTextures (1, &texture);
-            setupGenerator (&gen, MC_1_20, 0);
-            applySeed (&gen, DIM_OVERWORLD, seed);
+            cubiome::setupGenerator (&gen, cubiome::MC_1_20, 0);
+            cubiome::applySeed (&gen, cubiome::DIM_OVERWORLD, seed);
             generate = true;
         }
 
@@ -758,13 +758,13 @@ void ui_show_cubiomes_viewer (bool *opened)
             u32 *pixels = mem_alloc_uninit (u32, size * size, heap_allocator ());
             defer (mem_free (pixels, heap_allocator ()));
 
-            setClimateParaSeed (&gen.bn, gen.seed, 0, noise_map_type, 4);
+            cubiome::setClimateParaSeed (&gen.bn, gen.seed, 0, noise_map_type, 4);
 
             for (int j = 0; j < size; j += 1)
             {
                 for (int i = 0; i < size; i += 1)
                 {
-                    float y = sampleClimatePara (&gen.bn, null, cast (f64) i, cast (f64) j);
+                    float y = cubiome::sampleClimatePara (&gen.bn, null, cast (f64) i, cast (f64) j);
 
                     pixels[j * size + i] = ImGui::ColorConvertFloat4ToU32 (ImVec4{y, y, y, 1});
                 }

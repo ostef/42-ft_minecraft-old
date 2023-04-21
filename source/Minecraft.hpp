@@ -354,7 +354,7 @@ struct World
 {
     s32 seed;
 
-    Generator cubiome_gen;
+    cubiome::Generator cubiome_gen;
     Terrain_Params terrain_params;
 
     Vec2f continentalness_offsets[Perlin_Fractal_Max_Octaves];

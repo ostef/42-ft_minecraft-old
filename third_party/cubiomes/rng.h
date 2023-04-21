@@ -67,6 +67,9 @@ uint32_t rotr32(uint32_t a, uint8_t b)
 ///                    C implementation of Java Random
 ///=============================================================================
 
+namespace cubiome
+{
+
 static inline void setSeed(uint64_t *seed, uint64_t value)
 {
     *seed = (value ^ 0x5deece66d) & ((1ULL << 48) - 1);
@@ -383,6 +386,7 @@ uint64_t mulInv(uint64_t x, uint64_t m)
     return b;
 }
 
+}
 
 #endif /* RNG_H_ */
 

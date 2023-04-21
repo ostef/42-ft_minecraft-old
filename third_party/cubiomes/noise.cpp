@@ -4,6 +4,8 @@
 #include <math.h>
 #include <stdio.h>
 
+namespace cubiome
+{
 
 // grad()
 #if 0
@@ -516,3 +518,4 @@ double sampleDoublePerlin(const DoublePerlinNoise *noise,
     return v * noise->amplitude;
 }
 
+}

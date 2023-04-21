@@ -6,6 +6,8 @@
 
 #define LAYER_INIT_SHA          (~0ULL)
 
+namespace cubiome
+{
 
 /* Minecraft versions */
 enum MCVersion
@@ -534,7 +536,7 @@ double approxSurfaceBeta(const BiomeNoiseBeta *bnb, const SurfaceNoiseBeta *snb,
     int x, int z); // doesn't really work yet
 
 /**
- * (Alpha 1.2 - Beta 1.7) 
+ * (Alpha 1.2 - Beta 1.7)
  * Temperature and humidity values to biome.
  * (defined in biome_tree.c)
  */
@@ -653,5 +655,7 @@ void mapVoronoiPlane(uint64_t sha, int *out, int *src,
 #ifdef __cplusplus
 }
 #endif
+
+}
 
 #endif /* LAYER_H_ */

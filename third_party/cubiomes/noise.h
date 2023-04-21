@@ -4,6 +4,9 @@
 #include "rng.h"
 #include <math.h>
 
+namespace cubiome
+{
+
 STRUCT(PerlinNoise)
 {
     uint8_t d[512];
@@ -78,6 +81,8 @@ double sampleDoublePerlin(const DoublePerlinNoise *noise,
 #ifdef __cplusplus
 }
 #endif
+
+}
 
 #endif /* NOISE_H_ */
 
