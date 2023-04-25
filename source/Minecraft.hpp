@@ -61,6 +61,29 @@ f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistanc
 f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f64 y, f64 z);
 void perlin_generate_offsets (LC_RNG *rng, int count, Vec2f *offsets);
 
+// Bezier spline where each point can have either a fixed value
+// or a value computed from another Bezier spline and T value
+struct Bezier_Nested_Spline
+{
+    struct Knot
+    {
+        bool is_nested_spline;
+        f32 x;
+        f32 y;
+        Bezier_Nested_Spline *spline;
+        Vec2f in_tan;
+        Vec2f out_tan;
+    };
+
+    static const int Max_Knots = 12;
+
+    int t_value_index;  // Index into an array of T values
+    Static_Array<Knot, Max_Knots> knots;
+};
+
+Vec2f bezier_cubic_calculate (const Bezier_Nested_Spline *spline, const Slice<f32> &t_values);
+Vec2f bezier_cubic_calculate (int count, Vec2f *points, f32 t);
+
 inline
 static Vec2f bezier_cubic_calculate (const Vec2f &p1, const Vec2f &p2, const Vec2f &p3, const Vec2f &p4, f32 t)
 {
@@ -70,10 +93,9 @@ static Vec2f bezier_cubic_calculate (const Vec2f &p1, const Vec2f &p2, const Vec
     f32 w3 = 3 * u * t * t;
     f32 w4 = t * t * t;
 
-    return Vec2f{w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x, w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y};
+    return {w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x, w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y};
 }
 
-Vec2f bezier_cubic_calculate (int count, Vec2f *points, f32 t);
 
 bool load_texture_atlas (const char *texture_dirname);
 

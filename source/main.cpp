@@ -19,10 +19,77 @@ s64 g_chunk_creation_samples = 0;
 s64 g_drawn_vertex_count = 0;
 s64 g_delta_time = 0;
 
-bool g_generate_new_chunks = true;
+bool g_generate_new_chunks = false;
 int g_render_distance = 12;
 
 bool g_show_ui = true;
+
+Vec2f bezier_cubic_calculate (const Bezier_Nested_Spline *spline, const Slice<f32> &t_values)
+{
+    f32 t = t_values[spline->t_value_index];
+
+    if (spline->knots.count == 0)
+        return {0,0};
+
+    // @Speed @Todo: test different searching algorithms
+    int index;
+    for (index = 0; index < spline->knots.count; index += 1)
+    {
+        if (spline->knots[index].x >= t)
+            break;
+    }
+
+    // Special case if t is outside of the range of the spline
+    if (index == 0 || index == spline->knots.count)
+    {
+        if (index != 0)
+            index -= 1;
+
+        auto pt = spline->knots[index];
+        f32 y;
+        if (pt.is_nested_spline)
+            y = bezier_cubic_calculate (pt.spline, t_values).y;
+        else
+            y = pt.y;
+
+        /*
+        f32 slope;
+        if (index == 0)
+            slope = pt.out_tan.y / pt.out_tan.x;
+        else
+            slope = pt.in_tan.y / pt.in_tan.x;
+
+        t -= pt.x;
+
+        return y + slope * t;
+        */
+
+        return {t, y};
+    }
+
+    auto cp1 = spline->knots[index - 1];
+    auto cp2 = spline->knots[index];
+
+    ImVec2 p1;
+    p1.x = cp1.x;
+    if (cp1.is_nested_spline)
+        p1.y = bezier_cubic_calculate (cp1.spline, t_values).y;
+    else
+        p1.y = cp1.y;
+
+    ImVec2 p2 = ImVec2{cp1.out_tan.x, cp1.out_tan.y};
+    ImVec2 p3 = ImVec2{cp2.in_tan.x, cp2.in_tan.y};
+
+    ImVec2 p4;
+    p4.x = cp2.x;
+    if (cp2.is_nested_spline)
+        p4.y = bezier_cubic_calculate (cp2.spline, t_values).y;
+    else
+        p4.y = cp2.y;
+
+    //return bezier_cubic_calculate (p1, p2, p3, p4, t);
+    return {t, lerp (p1.y, p4.y, inverse_lerp (cp1.x, cp2.x, t))};
+}
 
 Vec2f bezier_cubic_calculate (int count, Vec2f *points, f32 t)
 {
