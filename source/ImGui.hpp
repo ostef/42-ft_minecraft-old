@@ -49,9 +49,11 @@ static int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list 
 
 namespace ImGuiExt
 {
-    #define ImGuiExt_BezierCurve_PointCountFromCurveCount(n) (3 * (n) + 1)
-    #define ImGuiExt_BezierCurve_CurveCountFromPointCount(n) (((n) - 1) / 3)
+    bool IsItemDoubleClicked (ImGuiMouseButton mouse_button = 0);
 
-    bool BezierCurveEditor (const char *label, const ImVec2 &size, int maxControlPoints, int *controlPointCount, ImVec2 *controlPoints,
-        const ImVec2 &x_range = {0,1}, const ImVec2 &y_range = {0,1});
+    #define ImGuiExt_BezierSpline_PointCountFromCurveCount(n) (3 * (n) + 1)
+    #define ImGuiExt_BezierSpline_CurveCountFromPointCount(n) (((n) - 1) / 3)
+
+    bool BezierSplineEditor (const char *str_id, const ImVec2 &size,
+        int max_control_points, int *control_point_count, ImVec2 *control_points);
 }

@@ -6,15 +6,20 @@
 
 namespace ImGuiExt
 {
-    static const float BezierCurveEditor_GrabRadius = 8;
+    bool IsItemDoubleClicked (ImGuiMouseButton mouse_button)
+    {
+        return ImGui::IsItemHovered () && ImGui::IsMouseDoubleClicked (mouse_button);
+    }
 
-    bool BezierCurvePoint (ImGuiID id, const ImRect &bounds, ImVec2 *point, const ImVec2 &x_range, const ImVec2 &y_range)
+    static const float BezierSplineEditor_GrabRadius = 8;
+
+    bool BezierSplinePoint (ImGuiID id, const ImRect &bounds, ImVec2 *point)
     {
         ImVec2 point_center = bounds.Min + ImVec2{point->x, 1 - point->y} * (bounds.Max - bounds.Min);
 
         ImRect box = ImRect{
-            point_center - ImVec2{BezierCurveEditor_GrabRadius, BezierCurveEditor_GrabRadius},
-            point_center + ImVec2{BezierCurveEditor_GrabRadius, BezierCurveEditor_GrabRadius}
+            point_center - ImVec2{BezierSplineEditor_GrabRadius, BezierSplineEditor_GrabRadius},
+            point_center + ImVec2{BezierSplineEditor_GrabRadius, BezierSplineEditor_GrabRadius}
         };
         bool hovered = false;
         bool held = false;
@@ -23,7 +28,7 @@ namespace ImGuiExt
         ImGui::ButtonBehavior (box, id, &hovered, &held, ImGuiButtonFlags_NoNavFocus);
 
         if (hovered || held)
-            ImGui::SetTooltip ("(%4.3f %4.3f)", ImLerp (x_range.x, x_range.y, point->x), ImLerp (y_range.x, y_range.y, point->y));
+            ImGui::SetTooltip ("(%4.3f %4.3f)", point->x, point->y);
 
         if (held)
         {
@@ -45,7 +50,7 @@ namespace ImGuiExt
         return false;
     }
 
-    void BezierCurveInsertPoint (const ImVec2 &p, int *control_point_count, ImVec2 *control_points)
+    void BezierSplineInsertPoint (const ImVec2 &p, int *control_point_count, ImVec2 *control_points)
     {
         int insert_index = -1;
         int curve_count = (*control_point_count - 1) / 3;
@@ -70,15 +75,14 @@ namespace ImGuiExt
         control_points[insert_index + 1] = p + ImVec2{0.1, 0};
     }
 
-    void BezierCurveRemovePoint (int index, int *control_point_count, ImVec2 *control_points)
+    void BezierSplineRemovePoint (int index, int *control_point_count, ImVec2 *control_points)
     {
         for (int i = index - 1; i < *control_point_count - 3; i += 1)
             control_points[i] = control_points[i + 3];
         *control_point_count -= 3;
     }
 
-    bool BezierCurveEditor (const char *str_id, const ImVec2 &size, int max_control_points, int *control_point_count, ImVec2 *control_points,
-        const ImVec2 &x_range, const ImVec2 &y_range)
+    bool BezierSplineEditor (const char *str_id, const ImVec2 &size, int max_control_points, int *control_point_count, ImVec2 *control_points)
     {
         assert (max_control_points >= 4);
 
@@ -164,7 +168,7 @@ namespace ImGuiExt
                 );
         }
 
-        int curve_count = ImGuiExt_BezierCurve_CurveCountFromPointCount (*control_point_count);
+        int curve_count = ImGuiExt_BezierSpline_CurveCountFromPointCount (*control_point_count);
 
         // Move points
         int point_hovered = -1;
@@ -183,7 +187,7 @@ namespace ImGuiExt
                     relative_next_tang = control_points[i + 1] - control_points[i];
             }
 
-            if (BezierCurvePoint (window->GetID (i), bounds, &control_points[i], x_range, y_range))
+            if (BezierSplinePoint (window->GetID (i), bounds, &control_points[i]))
             {
                 point_modified = i;
                 modified = true;
@@ -191,7 +195,7 @@ namespace ImGuiExt
 
             if (i % 3 == 0 && !first && !last && ImGui::IsItemClicked (ImGuiMouseButton_Middle))
             {
-                BezierCurveRemovePoint (i, control_point_count, control_points);
+                BezierSplineRemovePoint (i, control_point_count, control_points);
                 modified = true;
 
                 break;
@@ -252,12 +256,12 @@ namespace ImGuiExt
                 p.x = ImSaturate (p.x / size.x);
                 p.y = 1 - ImSaturate (p.y / size.y);
 
-                BezierCurveInsertPoint (p, control_point_count, control_points);
+                BezierSplineInsertPoint (p, control_point_count, control_points);
                 modified = true;
             }
         }
 
-        curve_count = ImGuiExt_BezierCurve_CurveCountFromPointCount (*control_point_count);
+        curve_count = ImGuiExt_BezierSpline_CurveCountFromPointCount (*control_point_count);
 
         // Draw lines
         for (int i = 0; i < curve_count; i += 1)
@@ -291,9 +295,9 @@ namespace ImGuiExt
             else
                 color = ImGui::GetColorU32 (ImGuiCol_Button);
 
-            draw_list->AddCircleFilled (p, BezierCurveEditor_GrabRadius, color);
+            draw_list->AddCircleFilled (p, BezierSplineEditor_GrabRadius, color);
             if (style.FrameBorderSize > 0)
-                draw_list->AddCircle (p, BezierCurveEditor_GrabRadius, ImGui::GetColorU32 (ImGuiCol_Border), 0, style.FrameBorderSize);
+                draw_list->AddCircle (p, BezierSplineEditor_GrabRadius, ImGui::GetColorU32 (ImGuiCol_Border), 0, style.FrameBorderSize);
         }
 
         ImGui::EndChild ();

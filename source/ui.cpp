@@ -384,12 +384,10 @@ void ui_show_terrain_params_editor (Terrain_Params *params)
             ImVec2 size;
             size.x = ImGui::GetContentRegionAvail ().x - ImGui::GetStyle ().WindowPadding.x;
             size.y = size.x * Curve_Editor_Size_Ratio;
-            ImGuiExt::BezierCurveEditor ("Height Curve", size,
+            ImGuiExt::BezierSplineEditor ("Height Curve", size,
                 array_size (params->bezier_points[i]),
                 &params->bezier_point_counts[i],
-                cast (ImVec2 *) params->bezier_points[i],
-                ImVec2{0,1},
-                ImVec2{cast (f32) params->height_range.x, cast (f32) params->height_range.y}
+                cast (ImVec2 *) params->bezier_points[i]
             );
 
             {
@@ -397,7 +395,7 @@ void ui_show_terrain_params_editor (Terrain_Params *params)
 
                 auto control_points = params->bezier_points[i];
                 int control_point_count = params->bezier_point_counts[i];
-                int curve_count = ImGuiExt_BezierCurve_CurveCountFromPointCount (control_point_count);
+                int curve_count = ImGuiExt_BezierSpline_CurveCountFromPointCount (control_point_count);
 
                 ImGui::LogText ("{\n");
                 for (int i = 0; i < curve_count; i += 1)

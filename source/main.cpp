@@ -37,7 +37,7 @@ Vec2f bezier_cubic_calculate (int count, Vec2f *points, f32 t)
         return bezier_cubic_calculate (p0, points[1], points[2], p1, t);
     }
 
-    int curve_count = ImGuiExt_BezierCurve_CurveCountFromPointCount (count);
+    int curve_count = ImGuiExt_BezierSpline_CurveCountFromPointCount (count);
     for_range (i, 0, curve_count)
     {
         if (t >= points[i * 3].x && t <= points[i * 3 + 3].x)

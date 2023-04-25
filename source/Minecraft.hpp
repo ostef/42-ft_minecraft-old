@@ -157,7 +157,7 @@ static const Block Block_Air = {};
 static const int Chunk_Size = 16;
 static const int Chunk_Height = 384;
 
-static const int Terrain_Curves_Max_Points = ImGuiExt_BezierCurve_PointCountFromCurveCount (10);
+static const int Terrain_Curves_Max_Points = ImGuiExt_BezierSpline_PointCountFromCurveCount (10);
 
 // The bezier points need to be a #define because we can't assign fixed arrays
 
