@@ -331,7 +331,7 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
         ImVec2 p;
         p.x = t_values[spline->t_value_index];
         p.y = bezier_cubic_calculate (spline, t_values).y;
-        p = bounds.Min + ImVec2{p.x * size.x, (1 - p.y) * size.x};
+        p = bounds.Min + ImVec2{p.x * size.x, (1 - p.y) * size.y};
         draw_list->AddCircleFilled (p, BezierSplineEditor_GrabRadius, ImGui::ColorConvertFloat4ToU32 (ImVec4{0.6, 0.4, 0.3, 0.8}));
     }
 
