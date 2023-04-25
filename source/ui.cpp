@@ -778,6 +778,28 @@ void ui_show_cubiomes_viewer (bool *opened)
     ImGui::End ();
 }
 
+void convert_cubiome_spline (cubiome::Spline *cub_sp, Bezier_Nested_Spline *sp)
+{
+    sp->t_value_index = cub_sp->typ;
+    for_range (i, 0, cub_sp->len)
+    {
+        Bezier_Nested_Spline::Knot knot {};
+        knot.x = (cub_sp->loc[i] + 1) * 0.5;
+        if (cub_sp->val[i]->len == 1)
+        {
+            knot.y = (cast (cubiome::FixSpline *) cub_sp->val[i])->val;
+            knot.y = (knot.y + 1) * 0.5;
+        }
+        else
+        {
+            knot.is_nested_spline = true;
+            knot.spline = mem_alloc_typed (Bezier_Nested_Spline, 1, heap_allocator ());
+            convert_cubiome_spline (cub_sp->val[i], knot.spline);
+        }
+        array_push (&sp->knots, knot);
+    }
+}
+
 void ui_show_windows ()
 {
     static bool show_terrain_creator = false;
@@ -840,16 +862,23 @@ void ui_show_windows ()
         static Bezier_Nested_Spline root_spline;
         static ImGuiExt::BezierNestedSplineEditorData data;
         if (!data.root_spline)
+        {
             data.root_spline = &root_spline;
 
-        static f32 t_values[3];
+            // Generate cubiome splines
+            cubiome::Generator gen;
+            cubiome::setupGenerator (&gen, cubiome::MC_1_20, 0);
+            convert_cubiome_spline (gen.bn.sp, &root_spline);
+        }
 
-        ImGuiExt::BezierNestedSplineEditor ("AA", {300, 300}, &data, slice_make (array_size (t_values), t_values),
-            "Continentalness\0Erosion\0Ridges\0");
+        static f32 t_values[4];
+
+        ImGuiExt::BezierNestedSplineEditor ("AA", {500, 300}, &data, slice_make (array_size (t_values), t_values),
+            "Continentalness\0Erosion\0Ridges\0Weirdness\0");
 
         for_range (i, 0, array_size (t_values))
         {
-            static const char *Names[] = {"Continentalness","Erosion","Ridges"};
+            static const char *Names[] = {"Continentalness","Erosion","Ridges","Weirdness"};
             ImGui::SliderFloat (Names[i], &t_values[i], 0.0, 1.0);
         }
     }
