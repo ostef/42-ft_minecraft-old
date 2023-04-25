@@ -448,15 +448,44 @@ struct Array : public Slice<T>
     Allocator allocator;
 };
 
-template<typename T>
-Slice<T> slice_from_array (const Array<T> &arr)
+template<typename T, s64 N>
+struct Static_Array
 {
-    Slice<T> result;
-    result.count = arr.count;
-    result.data = arr.data;
+    static const s64 Capacity = N;
 
-    return result;
-}
+    s64 count;
+    T data[N];
+
+
+    inline
+    T &operator[] (s64 i)
+    {
+        #ifndef NO_BOUNDS_CHECKING
+            assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
+        #endif
+
+        return data[i];
+    }
+
+    inline
+    const T &operator[] (s64 i) const
+    {
+        #ifndef NO_BOUNDS_CHECKING
+            assert (i >= 0 && i < count, "Bounds check failed (got %lld, expected [0; %lld]).", i, count - 1);
+        #endif
+
+        return data[i];
+    }
+
+    inline
+    operator Slice<T> ()
+    {
+        return Slice<T>{
+            count,
+            data,
+        };
+    }
+};
 
 template<typename T>
 void array_init (Array<T> *arr, Allocator allocator, s64 base_capacity = 0)
@@ -480,6 +509,12 @@ void array_free (Array<T> *arr)
 
 template<typename T>
 void array_clear (Array<T> *arr)
+{
+    arr->count = 0;
+}
+
+template<typename T, s64 N>
+void array_clear (Static_Array<T, N> *arr)
 {
     arr->count = 0;
 }
@@ -512,8 +547,28 @@ T *array_push (Array<T> *arr)
     return result;
 }
 
+template<typename T, s64 N>
+T *array_push (Static_Array<T, N> *arr)
+{
+    assert (arr->count < arr->Capacity, "Exceeded static array capacity of %lld", arr->Capacity);
+
+    T *result = &arr->data[arr->count];
+    arr->count += 1;
+
+    return result;
+}
+
 template<typename T>
 T *array_push (Array<T> *arr, const T &elem)
+{
+    T *ptr = array_push (arr);
+    *ptr = elem;
+
+    return ptr;
+}
+
+template<typename T, s64 N>
+T *array_push (Static_Array<T, N> *arr, const T &elem)
 {
     T *ptr = array_push (arr);
     *ptr = elem;
@@ -526,6 +581,103 @@ void array_pop (Array<T> *arr)
 {
     assert (arr->count > 0, "Cannot pop element from empty array.");
     arr->count -= 1;
+}
+
+template<typename T, s64 N>
+void array_pop (Static_Array<T, N> *arr)
+{
+    assert (arr->count > 0, "Cannot pop element from empty array.");
+    arr->count -= 1;
+}
+
+template<typename T>
+T *array_ordered_insert (Array<T> *arr, s64 index)
+{
+    assert (index >= 0 && index <= arr->count, "Array index %lld out of bounds [0;%lld]", index, arr->count);
+
+    if (arr->count >= arr->capacity)
+        array_reserve (arr, arr->capacity * 2 + 8);
+
+    for (s64 i = arr->count; i > index; i -= 1)
+        arr->data[i] = arr->data[i - 1];
+
+    arr->count += 1;
+
+    return &arr->data[index];
+}
+
+template<typename T, s64 N>
+T *array_ordered_insert (Static_Array<T, N> *arr, s64 index)
+{
+    assert (index >= 0 && index <= arr->count, "Array index %lld out of bounds [0;%lld]", index, arr->count);
+    assert (arr->count < arr->Capacity, "Exceeded static array capacity of %lld", arr->Capacity);
+
+    for (s64 i = arr->count; i > index; i -= 1)
+        arr->data[i] = arr->data[i - 1];
+
+    arr->count += 1;
+
+    return &arr->data[index];
+}
+
+template<typename T>
+T *array_ordered_insert (Array<T> *arr, s64 index, const T &elem)
+{
+    T *ptr = array_ordered_insert (arr, index);
+    *ptr = elem;
+
+    return ptr;
+}
+
+template<typename T, s64 N>
+T *array_ordered_insert (Static_Array<T, N> *arr, s64 index, const T &elem)
+{
+    T *ptr = array_ordered_insert (arr, index);
+    *ptr = elem;
+
+    return ptr;
+}
+
+template<typename T>
+void array_ordered_remove (Array<T> *arr, s64 index)
+{
+    assert (index >= 0 && index < arr->count, "Array index %lld out of bounds [0;%lld]", index, arr->count - 1);
+
+    for_range (i, index, arr->count - 1)
+        arr->data[i] = arr->data[i + 1];
+
+    arr->count -= 1;
+}
+
+template<typename T, s64 N>
+void array_ordered_remove (Static_Array<T, N> *arr, s64 index)
+{
+    assert (index >= 0 && index < arr->count, "Array index %lld out of bounds [0;%lld]", index, arr->count - 1);
+
+    for_range (i, index, arr->count - 1)
+        arr->data[i] = arr->data[i + 1];
+
+    arr->count -= 1;
+}
+
+template<typename T>
+s64 binary_search (const Slice<T> &slice, int (*pred) (const T &elem))
+{
+    s64 l = 0;
+    s64 r = slice.count - 1;
+    while (l <= r)
+    {
+        s64 m = (l + r) / 2;
+        int cmp = pred (slice[m]);
+        if (cmp < 0)
+            l = m + 1;
+        else if (cmp > 0)
+            r = m - 1;
+        else
+            return m;
+    }
+
+    return -1;
 }
 
 // Hash map
@@ -883,6 +1035,19 @@ inline
 u32 random_get ()
 {
     return random_get (&g_rng);
+}
+
+inline
+void random_skip (LC_RNG *rng, int n)
+{
+    for_range (i, 0, n)
+        random_get (rng);
+}
+
+inline
+void random_skip (int n)
+{
+    random_skip (&g_rng, n);
 }
 
 inline
