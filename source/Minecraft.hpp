@@ -96,6 +96,19 @@ static Vec2f bezier_cubic_calculate (const Vec2f &p1, const Vec2f &p2, const Vec
     return {w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x, w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y};
 }
 
+namespace ImGuiExt
+{
+    struct BezierNestedSplineEditorData
+    {
+        Bezier_Nested_Spline *root_spline;
+        Static_Array<Bezier_Nested_Spline *, 20> spline_stack;
+        s64 index_in_stack;
+        s64 selected_knot;
+    };
+
+    bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNestedSplineEditorData *splines, const Slice<f32> &t_values,
+        const char *zero_separated_t_value_names = null);
+}
 
 bool load_texture_atlas (const char *texture_dirname);
 

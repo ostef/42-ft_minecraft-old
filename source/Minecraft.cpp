@@ -3,6 +3,7 @@
 #include "perlin.cpp"
 #include "render.cpp"
 #include "world.cpp"
+#include "widgets.cpp"
 #include "ui.cpp"
 #include "main.cpp"
 

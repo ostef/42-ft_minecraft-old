@@ -834,4 +834,24 @@ void ui_show_windows ()
 
     if (show_cubiomes_viewer)
         ui_show_cubiomes_viewer (&show_cubiomes_viewer);
+
+    if (ImGui::Begin ("Nested Spline Editor"))
+    {
+        static Bezier_Nested_Spline root_spline;
+        static ImGuiExt::BezierNestedSplineEditorData data;
+        if (!data.root_spline)
+            data.root_spline = &root_spline;
+
+        static f32 t_values[3];
+
+        ImGuiExt::BezierNestedSplineEditor ("AA", {300, 300}, &data, slice_make (array_size (t_values), t_values),
+            "Continentalness\0Erosion\0Ridges\0");
+
+        for_range (i, 0, array_size (t_values))
+        {
+            static const char *Names[] = {"Continentalness","Erosion","Ridges"};
+            ImGui::SliderFloat (Names[i], &t_values[i], 0.0, 1.0);
+        }
+    }
+    ImGui::End ();
 }
