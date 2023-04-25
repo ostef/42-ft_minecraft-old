@@ -8,15 +8,39 @@
 namespace ImGuiExt
 {
 
-static const f32 BezierSplineEditor_GrabRadius = 8;
+static const f32 NestedHermiteSplineEditor_GrabRadius = 8;
 
-bool BezierNestedSplineMovePoint (int index, const ImRect &bounds, f32 *x, f32 *y, bool move_x, bool move_y)
+void AddHermiteCubic (ImDrawList *draw_list,
+    const ImVec2 &offset, const ImVec2 &scale,
+    f32 x0, f32 y0, f32 der0, f32 x1, f32 y1, f32 der1,
+    ImU32 color, float thickness, int num_segments)
+{
+    if ((color & IM_COL32_A_MASK) == 0)
+        return;
+
+    ImVec2 p0;
+    p0.x = offset.x + x0 * scale.x;
+    p0.y = offset.y + y0 * scale.y;
+
+    draw_list->PathLineTo (p0);
+    f32 t_step = 1.0f / cast (f32) num_segments;
+    for (int i_step = 1; i_step <= num_segments; i_step += 1)
+    {
+        ImVec2 p;
+        p.x = offset.x + lerp (x0, x1, t_step * i_step) * scale.x;
+        p.y = offset.y + hermite_cubic_calculate (x0, y0, der0, x1, y1, der1, lerp (x0, x1, t_step * i_step)) * scale.y;
+        draw_list->_Path.push_back (p);
+    }
+    draw_list->PathStroke (color, 0, thickness);
+}
+
+bool NestedHermiteSplineMovePoint (int index, const ImRect &bounds, f32 *x, f32 *y, bool move_x, bool move_y)
 {
     ImVec2 point_center = bounds.Min + ImVec2{*x, 1 - *y} * (bounds.Max - bounds.Min);
 
     ImRect box = ImRect{
-        point_center - ImVec2{BezierSplineEditor_GrabRadius, BezierSplineEditor_GrabRadius},
-        point_center + ImVec2{BezierSplineEditor_GrabRadius, BezierSplineEditor_GrabRadius}
+        point_center - ImVec2{NestedHermiteSplineEditor_GrabRadius, NestedHermiteSplineEditor_GrabRadius},
+        point_center + ImVec2{NestedHermiteSplineEditor_GrabRadius, NestedHermiteSplineEditor_GrabRadius}
     };
 
     bool hovered = false;
@@ -57,7 +81,7 @@ bool BezierNestedSplineMovePoint (int index, const ImRect &bounds, f32 *x, f32 *
     return false;
 }
 
-bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNestedSplineEditorData *data, const Slice<f32> &t_values,
+bool NestedHermiteSplineEditor (const char *str_id, const ImVec2 &size, NestedHermiteSplineEditorData *data, const Slice<f32> &t_values,
     const char *zero_separated_t_value_names)
 {
     auto style = ImGui::GetStyle ();
@@ -91,17 +115,6 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
     ImGui::SameLine ();
 
     auto spline = data->spline_stack[data->index_in_stack];
-    if (spline->knots.count < 2)
-    {
-        array_clear (&spline->knots);
-        auto k0 = array_push (&spline->knots);
-        k0->x = 0;
-        k0->y = 0;
-
-        auto k1 = array_push (&spline->knots);
-        k1->x = 1;
-        k1->y = 1;
-    }
 
     ImGui::BeginDisabled (data->selected_knot == -1 || !spline->knots[data->selected_knot].is_nested_spline);
     if (ImGui::Button ("-"))
@@ -117,17 +130,7 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
     if (ImGui::Button ("+"))
     {
         spline->knots[data->selected_knot].is_nested_spline = true;
-        auto sp = mem_alloc_typed (Bezier_Nested_Spline, 1, heap_allocator ());
-
-        auto k0 = array_push (&sp->knots, {});
-        k0->x = 0;
-        k0->y = 0;
-
-        auto k1 = array_push (&sp->knots, {});
-        k1->x = 1;
-        k1->y = 1;
-
-        spline->knots[data->selected_knot].spline = sp;
+        spline->knots[data->selected_knot].spline = mem_alloc_typed (Nested_Hermite_Spline, 1, heap_allocator ());
     }
     ImGui::EndDisabled ();
 
@@ -158,13 +161,11 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
     int hovered_knot  = -1;
     for_array (i, spline->knots)
     {
-        bool first = i == 0;
-        bool last  = i == spline->knots.count - 1;
         auto *knot = &spline->knots[i];
         if (knot->is_nested_spline)
         {
-            f32 y_value = bezier_cubic_calculate (knot->spline, t_values).y;
-            if (BezierNestedSplineMovePoint (i, bounds, &knot->x, &y_value, !first && !last, false))
+            f32 y_value = hermite_cubic_calculate (knot->spline, t_values);
+            if (NestedHermiteSplineMovePoint (i, bounds, &knot->x, &y_value, true, false))
             {
                 modified_knot = i;
                 data->selected_knot = i;
@@ -172,7 +173,7 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
         }
         else
         {
-            if (BezierNestedSplineMovePoint (i, bounds, &knot->x, &knot->y, !first && !last, true))
+            if (NestedHermiteSplineMovePoint (i, bounds, &knot->x, &knot->y, true, true))
             {
                 modified_knot = i;
                 data->selected_knot = i;
@@ -187,7 +188,7 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
         if (ImGui::IsItemHovered ())
             hovered_knot = i;
 
-        if (ImGui::IsItemClicked (ImGuiMouseButton_Middle) && !first && !last)
+        if (ImGui::IsItemClicked (ImGuiMouseButton_Middle))
         {
             array_ordered_remove (&spline->knots, i);
             modified_knot = i;
@@ -196,7 +197,7 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
             else if (data->selected_knot == i)
                 data->selected_knot = -1;
         }
-        else if (ImGuiExt::IsItemDoubleClicked (ImGuiMouseButton_Left))
+        else if (ImGui::IsItemClicked (ImGuiMouseButton_Right))
         {
             if (knot->is_nested_spline)
             {
@@ -272,34 +273,38 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
     // Draw lines
     for_range (i, 0, spline->knots.count - 1)
     {
-        ImVec2 p0;
-        p0.x = spline->knots[i].x;
-        if (spline->knots[i].is_nested_spline)
-            p0.y = bezier_cubic_calculate (spline->knots[i].spline, t_values).y;
-        else
-            p0.y = spline->knots[i].y;
+        auto k0 = spline->knots[i];
+        auto k1 = spline->knots[i + 1];
+
+        AddHermiteCubic (draw_list,
+            ImVec2{bounds.Min.x, bounds.Min.y + size.y}, ImVec2{size.x, -size.y},
+            k0.x, hermite_knot_value (k0, t_values), k0.derivative,
+            k1.x, hermite_knot_value (k1, t_values), k1.derivative,
+            ImGui::GetColorU32 (ImGuiCol_Text),
+            2
+        );
+    }
+
+    // Draw derivative
+    if (data->selected_knot != -1)
+    {
+        auto knot = spline->knots[data->selected_knot];
+        ImVec2 p0 = {knot.x, hermite_knot_value (knot, t_values)};
+        ImVec2 t0 = {p0.x + 0.1f, p0.y + 0.1f * knot.derivative};
+        ImVec2 t1 = {p0.x - 0.1f, p0.y - 0.1f * knot.derivative};
+
         p0 = bounds.Min + ImVec2{p0.x * size.x, (1 - p0.y) * size.y};
+        t0 = bounds.Min + ImVec2{t0.x * size.x, (1 - t0.y) * size.y};
+        t1 = bounds.Min + ImVec2{t1.x * size.x, (1 - t1.y) * size.y};
 
-        ImVec2 p1;
-        p1.x = spline->knots[i + 1].x;
-        if (spline->knots[i + 1].is_nested_spline)
-            p1.y = bezier_cubic_calculate (spline->knots[i + 1].spline, t_values).y;
-        else
-            p1.y = spline->knots[i + 1].y;
-        p1 = bounds.Min + ImVec2{p1.x * size.x, (1 - p1.y) * size.y};
-
-        draw_list->AddLine (p0, p1, ImGui::GetColorU32 (ImGuiCol_Text));
+        draw_list->AddLine (p0, t0, ImGui::GetColorU32 (ImGuiCol_Text, 0.7f));
+        draw_list->AddLine (p0, t1, ImGui::GetColorU32 (ImGuiCol_Text, 0.7f));
     }
 
     // Draw points
     for_array (i, spline->knots)
     {
-        ImVec2 p0;
-        p0.x = spline->knots[i].x;
-        if (spline->knots[i].is_nested_spline)
-            p0.y = bezier_cubic_calculate (spline->knots[i].spline, t_values).y;
-        else
-            p0.y = spline->knots[i].y;
+        ImVec2 p0 = {spline->knots[i].x, hermite_knot_value (spline->knots[i], t_values)};
         p0 = bounds.Min + ImVec2{p0.x * size.x, (1 - p0.y) * size.y};
 
         ImU32 color;
@@ -313,16 +318,16 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
 
         if (spline->knots[i].is_nested_spline)
         {
-            auto size = ImVec2{BezierSplineEditor_GrabRadius, BezierSplineEditor_GrabRadius};
+            auto size = ImVec2{NestedHermiteSplineEditor_GrabRadius, NestedHermiteSplineEditor_GrabRadius};
             draw_list->AddRectFilled (p0 - size, p0 + size, color);
             if (style.FrameBorderSize > 0)
                 draw_list->AddRect (p0 - size, p0 + size, ImGui::GetColorU32 (ImGuiCol_Border), 0, 0, style.FrameBorderSize);
         }
         else
         {
-            draw_list->AddCircleFilled (p0, BezierSplineEditor_GrabRadius, color);
+            draw_list->AddCircleFilled (p0, NestedHermiteSplineEditor_GrabRadius, color);
             if (style.FrameBorderSize > 0)
-                draw_list->AddCircle (p0, BezierSplineEditor_GrabRadius, ImGui::GetColorU32 (ImGuiCol_Border), 0, style.FrameBorderSize);
+                draw_list->AddCircle (p0, NestedHermiteSplineEditor_GrabRadius, ImGui::GetColorU32 (ImGuiCol_Border), 0, style.FrameBorderSize);
         }
     }
 
@@ -330,9 +335,9 @@ bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNes
     {
         ImVec2 p;
         p.x = t_values[spline->t_value_index];
-        p.y = bezier_cubic_calculate (spline, t_values).y;
+        p.y = hermite_cubic_calculate (spline, t_values);
         p = bounds.Min + ImVec2{p.x * size.x, (1 - p.y) * size.y};
-        draw_list->AddCircleFilled (p, BezierSplineEditor_GrabRadius, ImGui::ColorConvertFloat4ToU32 (ImVec4{0.6, 0.4, 0.3, 0.8}));
+        draw_list->AddCircleFilled (p, NestedHermiteSplineEditor_GrabRadius, ImGui::ColorConvertFloat4ToU32 (ImVec4{0.6, 0.4, 0.3, 0.8}));
     }
 
     return modified;

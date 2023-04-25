@@ -778,13 +778,15 @@ void ui_show_cubiomes_viewer (bool *opened)
     ImGui::End ();
 }
 
-void convert_cubiome_spline (cubiome::Spline *cub_sp, Bezier_Nested_Spline *sp)
+void convert_cubiome_spline (cubiome::Spline *cub_sp, Nested_Hermite_Spline *sp)
 {
     sp->t_value_index = cub_sp->typ;
     for_range (i, 0, cub_sp->len)
     {
-        Bezier_Nested_Spline::Knot knot {};
+        Nested_Hermite_Spline::Knot knot {};
+        knot.derivative = cub_sp->der[i];
         knot.x = (cub_sp->loc[i] + 1) * 0.5;
+
         if (cub_sp->val[i]->len == 1)
         {
             knot.y = (cast (cubiome::FixSpline *) cub_sp->val[i])->val;
@@ -793,9 +795,10 @@ void convert_cubiome_spline (cubiome::Spline *cub_sp, Bezier_Nested_Spline *sp)
         else
         {
             knot.is_nested_spline = true;
-            knot.spline = mem_alloc_typed (Bezier_Nested_Spline, 1, heap_allocator ());
+            knot.spline = mem_alloc_typed (Nested_Hermite_Spline, 1, heap_allocator ());
             convert_cubiome_spline (cub_sp->val[i], knot.spline);
         }
+
         array_push (&sp->knots, knot);
     }
 }
@@ -859,8 +862,8 @@ void ui_show_windows ()
 
     if (ImGui::Begin ("Nested Spline Editor"))
     {
-        static Bezier_Nested_Spline root_spline;
-        static ImGuiExt::BezierNestedSplineEditorData data;
+        static Nested_Hermite_Spline root_spline;
+        static ImGuiExt::NestedHermiteSplineEditorData data;
         if (!data.root_spline)
         {
             data.root_spline = &root_spline;
@@ -873,7 +876,9 @@ void ui_show_windows ()
 
         static f32 t_values[4];
 
-        ImGuiExt::BezierNestedSplineEditor ("AA", {500, 300}, &data, slice_make (array_size (t_values), t_values),
+        ImVec2 size = {ImGui::GetContentRegionAvail ().x - 20, (ImGui::GetContentRegionAvail ().x - 20) * 300/500};
+
+        ImGuiExt::NestedHermiteSplineEditor ("AA", size, &data, slice_make (array_size (t_values), t_values),
             "Continentalness\0Erosion\0Ridges\0Weirdness\0");
 
         for_range (i, 0, array_size (t_values))

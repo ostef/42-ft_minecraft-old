@@ -61,27 +61,6 @@ f64 perlin_fractal_noise (f64 scale, int octaves, Vec2f *offsets, f64 persistanc
 f64 perlin_fractal_noise (Perlin_Fractal_Params params, Vec2f *offsets, f64 x, f64 y, f64 z);
 void perlin_generate_offsets (LC_RNG *rng, int count, Vec2f *offsets);
 
-// Bezier spline where each point can have either a fixed value
-// or a value computed from another Bezier spline and T value
-struct Bezier_Nested_Spline
-{
-    struct Knot
-    {
-        bool is_nested_spline;
-        f32 x;
-        f32 y;
-        Bezier_Nested_Spline *spline;
-        Vec2f in_tan;
-        Vec2f out_tan;
-    };
-
-    static const int Max_Knots = 12;
-
-    int t_value_index;  // Index into an array of T values
-    Static_Array<Knot, Max_Knots> knots;
-};
-
-Vec2f bezier_cubic_calculate (const Bezier_Nested_Spline *spline, const Slice<f32> &t_values);
 Vec2f bezier_cubic_calculate (int count, Vec2f *points, f32 t);
 
 inline
@@ -96,18 +75,45 @@ static Vec2f bezier_cubic_calculate (const Vec2f &p1, const Vec2f &p2, const Vec
     return {w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x, w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y};
 }
 
-namespace ImGuiExt
+struct Nested_Hermite_Spline
 {
-    struct BezierNestedSplineEditorData
+    struct Knot
     {
-        Bezier_Nested_Spline *root_spline;
-        Static_Array<Bezier_Nested_Spline *, 20> spline_stack;
-        s64 index_in_stack;
-        s64 selected_knot;
+        bool is_nested_spline;
+        f32 x;
+        f32 y;
+        Nested_Hermite_Spline *spline;
+        f32 derivative;
     };
 
-    bool BezierNestedSplineEditor (const char *str_id, const ImVec2 &size, BezierNestedSplineEditorData *splines, const Slice<f32> &t_values,
-        const char *zero_separated_t_value_names = null);
+    static const int Max_Knots = 12;
+
+    int t_value_index;  // Index into an array of T values
+    Static_Array<Knot, Max_Knots> knots;
+};
+
+f32 hermite_cubic_calculate (f32 x0, f32 y0, f32 der0, f32 x1, f32 y1, f32 der1, f32 t);
+f32 hermite_knot_value (const Nested_Hermite_Spline::Knot &knot, const Slice<f32> &t_values);
+f32 hermite_cubic_calculate (const Nested_Hermite_Spline *spline, const Slice<f32> &t_values);
+
+namespace ImGuiExt
+{
+   struct NestedHermiteSplineEditorData
+   {
+       Nested_Hermite_Spline *root_spline;
+       Static_Array<Nested_Hermite_Spline *, 20> spline_stack;
+       s64 index_in_stack;
+       s64 selected_knot;
+   };
+
+    void AddHermiteCubic (ImDrawList *draw_list,
+        const ImVec2 &offset, const ImVec2 &scale,
+        f32 x0, f32 y0, f32 der0, f32 x1, f32 y1, f32 der1,
+        ImU32 color, float thickness = 1.0f, int num_segments = 64);
+
+    bool NestedHermiteSplineEditor (const char *str_id, const ImVec2 &size, NestedHermiteSplineEditorData *data, const Slice<f32> &t_values,
+       const char *zero_separated_t_value_names = null);
+
 }
 
 bool load_texture_atlas (const char *texture_dirname);
