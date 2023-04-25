@@ -225,7 +225,7 @@ void print_stack_trace (CONTEXT *ctx, int skips)
         fprint_string (stderr, "\t");
         fprint_string (stderr, func_name);
 
-        static const int NAME_WIDTH = 32;
+        static const int NAME_WIDTH = 64;
         int padding = NAME_WIDTH - func_name.count;
         for_range (i, 0, padding)
             fprint_string (stderr, " ");
