@@ -58,6 +58,9 @@ namespace ImGuiExt
         float x0, float y0, float der0, float x1, float y1, float der1,
         ImU32 color, float thickness = 1.0f, int num_segments = 64);
 
+    void AddDottedLine (ImDrawList *draw_list, const ImVec2 &a, const ImVec2 &b, float spacing, ImU32 color, float thickness = 1.0f);
+    void AddDashedLine (ImDrawList *draw_list, const ImVec2 &a, const ImVec2 &b, float line_len, float spacing, ImU32 color, float thickness = 1.0f);
+
     #define ImGuiExt_BezierSpline_PointCountFromCurveCount(n) (3 * (n) + 1)
     #define ImGuiExt_BezierSpline_CurveCountFromPointCount(n) (((n) - 1) / 3)
 

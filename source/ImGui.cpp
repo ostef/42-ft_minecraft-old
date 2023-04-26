@@ -43,6 +43,33 @@ namespace ImGuiExt
         draw_list->PathStroke (color, 0, thickness);
     }
 
+    void AddDashedLine (ImDrawList *draw_list, const ImVec2 &a, const ImVec2 &b, float line_len, float spacing, ImU32 color, float thickness)
+    {
+        float len = ImSqrt (ImLengthSqr (b - a));
+        ImVec2 dir = (b - a) / len;
+
+        float i = 0;
+        while (i < len)
+        {
+            draw_list->AddLine (a + dir * i, a + dir * (i + line_len), color, thickness);
+            i += line_len + spacing;
+        }
+    }
+
+    void AddDottedLine (ImDrawList *draw_list, const ImVec2 &a, const ImVec2 &b, float spacing, ImU32 color, float thickness)
+    {
+        float len = ImSqrt (ImLengthSqr (b - a));
+        ImVec2 dir = (b - a) / len;
+        float radius = thickness / 2;
+
+        float i = radius;
+        while (i < len)
+        {
+            draw_list->AddCircleFilled (a + dir * i, radius, color);
+            i += radius * 2 + spacing;
+        }
+    }
+
     static const float BezierSplineEditor_GrabRadius = 8;
 
     bool BezierSplinePoint (ImGuiID id, const ImRect &bounds, ImVec2 *point)
