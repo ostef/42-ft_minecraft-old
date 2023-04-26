@@ -810,21 +810,21 @@ void ui_show_windows ()
 
     if (ImGui::BeginMainMenuBar ())
     {
-        if (ImGui::Button ("Demo Window"))
+        if (ImGui::MenuItem ("Demo Window"))
             g_show_demo_window = true;
-        if (ImGui::Button ("Metrics and Settings"))
+        if (ImGui::MenuItem ("Metrics and Settings"))
             g_show_metrics_window = true;
-        if (ImGui::Button ("Perlin Test"))
+        if (ImGui::MenuItem ("Perlin Test"))
             g_show_perlin_test_window = true;
-        if (ImGui::Button ("Texture Atlas"))
+        if (ImGui::MenuItem ("Texture Atlas"))
             g_show_texture_atlas_window = true;
-        if (ImGui::Button ("World Settings"))
+        if (ImGui::MenuItem ("World Settings"))
             g_show_world_window = true;
-        if (ImGui::Button ("Terrain Noise Maps"))
+        if (ImGui::MenuItem ("Terrain Noise Maps"))
             g_show_terrain_noise_maps_window = true;
-        if (ImGui::Button ("Terrain Creator"))
+        if (ImGui::MenuItem ("Terrain Creator"))
             show_terrain_creator = true;
-        if (ImGui::Button ("Cubiomes Viewer"))
+        if (ImGui::MenuItem ("Cubiomes Viewer"))
             show_cubiomes_viewer = true;
 
         ImGui::EndMainMenuBar ();
