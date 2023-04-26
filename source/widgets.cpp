@@ -265,16 +265,17 @@ bool NestedHermiteSplineEditor (const char *str_id, const ImVec2 &size, NestedHe
     if (data->selected_knot != -1)
     {
         auto knot = spline->knots[data->selected_knot];
-        ImVec2 p0 = {knot.x, hermite_knot_value (knot, t_values)};
-        ImVec2 t0 = {p0.x + 0.1f, p0.y + 0.1f * knot.derivative};
-        ImVec2 t1 = {p0.x - 0.1f, p0.y - 0.1f * knot.derivative};
+        f32 y = hermite_knot_value (knot, t_values);
+        ImVec2 p0 = {knot.x, y};
+        ImVec2 t0 = {0, y - knot.x * knot.derivative};
+        ImVec2 t1 = {1, y + (1 - knot.x) * knot.derivative};
 
         p0 = bounds.Min + ImVec2{p0.x * size.x, (1 - p0.y) * size.y};
         t0 = bounds.Min + ImVec2{t0.x * size.x, (1 - t0.y) * size.y};
         t1 = bounds.Min + ImVec2{t1.x * size.x, (1 - t1.y) * size.y};
 
-        draw_list->AddLine (p0, t0, ImGui::GetColorU32 (ImGuiCol_Text, 0.7f));
-        draw_list->AddLine (p0, t1, ImGui::GetColorU32 (ImGuiCol_Text, 0.7f));
+        ImGuiExt::AddDashedLine (draw_list, p0, t0, 4, 8, ImGui::GetColorU32 (ImGuiCol_Text, 0.7f), 2);
+        ImGuiExt::AddDashedLine (draw_list, p0, t1, 4, 8, ImGui::GetColorU32 (ImGuiCol_Text, 0.7f), 2);
     }
 
     // Draw points
