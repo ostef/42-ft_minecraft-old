@@ -225,7 +225,7 @@ void ui_show_metrics_and_settings_window (bool *opened)
         {
             auto chunk = *it.value;
             if (chunk)
-                total_vertex_count += chunk->vertex_count;
+                total_vertex_count += chunk->total_vertex_count;
         }
 
         ImGui::LabelText ("Frame time", "%.2f ms, %.2f FPS", g_delta_time / 1000.0, 1000000.0 / g_delta_time);
@@ -246,7 +246,27 @@ void ui_show_texture_atlas_window (bool *opened)
 {
     if (ImGui::Begin ("Texture Atlas", opened))
     {
+        auto draw_list = ImGui::GetWindowDrawList ();
         auto avail_width = ImGui::GetContentRegionAvail ().x;
+        ImVec2 min = ImGui::GetCursorScreenPos ();
+
+        static const float Checkerboard_Grid_Size = 16;
+        int checkerboard_size = cast (int) (avail_width / Checkerboard_Grid_Size);
+        for_range (i, 0, checkerboard_size)
+        {
+            for_range (j, 0, checkerboard_size)
+            {
+                if ((i + j) % 2 == 0)
+                    continue;
+
+                draw_list->AddRectFilled (
+                    min + ImVec2{i*Checkerboard_Grid_Size, j*Checkerboard_Grid_Size},
+                    min + ImVec2{(i + 1)*Checkerboard_Grid_Size, (j + 1)*Checkerboard_Grid_Size},
+                    ImGui::ColorConvertFloat4ToU32 (ImVec4{1,1,1,0.5})
+                );
+            }
+        }
+
         ImGui::Image (cast (ImTextureID) g_texture_atlas, {cast (f32) avail_width, cast (f32) avail_width});
     }
     ImGui::End ();
@@ -902,37 +922,41 @@ void ui_show_windows ()
     if (show_cubiomes_viewer)
         ui_show_cubiomes_viewer (&show_cubiomes_viewer);
 
-    if (ImGui::Begin ("Nested Spline Editor"))
+    static bool show_nested_spline_editor = false;
+    if (show_nested_spline_editor)
     {
-        static Nested_Hermite_Spline root_spline;
-        static ImGuiExt::NestedHermiteSplineEditorData data;
-        if (!data.root_spline)
+        if (ImGui::Begin ("Nested Spline Editor", &show_nested_spline_editor))
         {
-            data.root_spline = &root_spline;
+            static Nested_Hermite_Spline root_spline;
+            static ImGuiExt::NestedHermiteSplineEditorData data;
+            if (!data.root_spline)
+            {
+                data.root_spline = &root_spline;
 
-            // Generate cubiome splines
-            cubiome::Generator gen;
-            cubiome::setupGenerator (&gen, cubiome::MC_1_20, 0);
-            convert_cubiome_spline (gen.bn.sp, &root_spline);
+                // Generate cubiome splines
+                cubiome::Generator gen;
+                cubiome::setupGenerator (&gen, cubiome::MC_1_20, 0);
+                convert_cubiome_spline (gen.bn.sp, &root_spline);
 
-            Vec2f x_range = {F32_MAX, -F32_MAX};
-            Vec2f y_range = {F32_MAX, -F32_MAX};
-            calculate_spline_range (&root_spline, &x_range, &y_range);
-            fix_spline_range (&root_spline, x_range.x, x_range.y, y_range.x, y_range.y);
+                Vec2f x_range = {F32_MAX, -F32_MAX};
+                Vec2f y_range = {F32_MAX, -F32_MAX};
+                calculate_spline_range (&root_spline, &x_range, &y_range);
+                fix_spline_range (&root_spline, x_range.x, x_range.y, y_range.x, y_range.y);
+            }
+
+            static f32 t_values[4];
+
+            ImVec2 size = {ImGui::GetContentRegionAvail ().x - 20, (ImGui::GetContentRegionAvail ().x - 20) * 300/500};
+
+            ImGuiExt::NestedHermiteSplineEditor ("AA", size, &data, slice_make (array_size (t_values), t_values),
+                "Continentalness\0Erosion\0Ridges\0Weirdness\0");
+
+            for_range (i, 0, array_size (t_values))
+            {
+                static const char *Names[] = {"Continentalness","Erosion","Ridges","Weirdness"};
+                ImGui::SliderFloat (Names[i], &t_values[i], 0.0, 1.0);
+            }
         }
-
-        static f32 t_values[4];
-
-        ImVec2 size = {ImGui::GetContentRegionAvail ().x - 20, (ImGui::GetContentRegionAvail ().x - 20) * 300/500};
-
-        ImGuiExt::NestedHermiteSplineEditor ("AA", size, &data, slice_make (array_size (t_values), t_values),
-            "Continentalness\0Erosion\0Ridges\0Weirdness\0");
-
-        for_range (i, 0, array_size (t_values))
-        {
-            static const char *Names[] = {"Continentalness","Erosion","Ridges","Weirdness"};
-            ImGui::SliderFloat (Names[i], &t_values[i], 0.0, 1.0);
-        }
+        ImGui::End ();
     }
-    ImGui::End ();
 }

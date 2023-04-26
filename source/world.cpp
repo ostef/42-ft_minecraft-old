@@ -9,32 +9,37 @@ void chunk_init (Chunk *chunk, s64 x, s64 z)
 
     chunk->is_dirty = true;
 
-    glGenVertexArrays (1, &chunk->opengl_is_stupid_vao);
-    glBindVertexArray (chunk->opengl_is_stupid_vao);
 
-    glGenBuffers (1, &chunk->gl_vbo);
-    glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
+    glGenVertexArrays (Chunk_Mesh_Count, chunk->opengl_is_stupid_vaos);
+    glGenBuffers (Chunk_Mesh_Count, chunk->gl_vbos);
 
-    glEnableVertexAttribArray (0);
-    glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), cast (void *) offsetof (Vertex, position));
+    for_range (i, 0, Chunk_Mesh_Count)
+    {
+        glBindVertexArray (chunk->opengl_is_stupid_vaos[i]);
+        glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbos[i]);
 
-    glEnableVertexAttribArray (1);
-    glVertexAttribIPointer (1, 1, GL_UNSIGNED_BYTE, sizeof (Vertex), cast (void *) offsetof (Vertex, face));
+        glEnableVertexAttribArray (0);
+        glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), cast (void *) offsetof (Vertex, position));
 
-    glEnableVertexAttribArray (2);
-    glVertexAttribIPointer (2, 1, GL_UNSIGNED_BYTE, sizeof (Vertex), cast (void *) offsetof (Vertex, block_id));
+        glEnableVertexAttribArray (1);
+        glVertexAttribIPointer (1, 1, GL_UNSIGNED_BYTE, sizeof (Vertex), cast (void *) offsetof (Vertex, face));
 
-    glEnableVertexAttribArray (3);
-    glVertexAttribIPointer (3, 1, GL_UNSIGNED_BYTE, sizeof (Vertex), cast (void *) offsetof (Vertex, block_corner));
+        glEnableVertexAttribArray (2);
+        glVertexAttribIPointer (2, 1, GL_UNSIGNED_BYTE, sizeof (Vertex), cast (void *) offsetof (Vertex, block_id));
 
-    glBindVertexArray (0);
-    glBindBuffer (GL_ARRAY_BUFFER, 0);
+        glEnableVertexAttribArray (3);
+        glVertexAttribIPointer (3, 1, GL_UNSIGNED_BYTE, sizeof (Vertex), cast (void *) offsetof (Vertex, block_corner));
+
+        glBindVertexArray (0);
+        glBindBuffer (GL_ARRAY_BUFFER, 0);
+    }
+
 }
 
 void chunk_cleanup (Chunk *chunk)
 {
-    glDeleteVertexArrays (1, &chunk->opengl_is_stupid_vao);
-    glDeleteBuffers (1, &chunk->gl_vbo);
+    glDeleteVertexArrays (Chunk_Mesh_Count, chunk->opengl_is_stupid_vaos);
+    glDeleteBuffers (Chunk_Mesh_Count, chunk->gl_vbos);
 }
 
 Vec2i chunk_absolute_to_relative_coordinates (Chunk *chunk, s64 x, s64 z)
@@ -153,110 +158,6 @@ void chunk_generate_cubiome (World *world, Chunk *chunk)
                 else
                 {
                     chunk->blocks[index].type = Block_Type_Stone;
-                }
-            }
-        }
-    }
-}
-
-void chunk_generate_mine (World *world, Chunk *chunk)
-{
-    if (chunk->generated)
-        return;
-
-    LC_RNG rng;
-    random_seed (&rng, world->seed);
-    f64 offset_x = random_rangef (&rng, -10000, 10000);
-    f64 offset_y = random_rangef (&rng, -10000, 10000);
-    f64 offset_z = random_rangef (&rng, -10000, 10000);
-
-    defer (chunk->generated = true);
-
-    f32 continentalness_max = perlin_fractal_max (world->terrain_params.continentalness_perlin.octaves, world->terrain_params.continentalness_perlin.persistance);
-    f32 erosion_max = perlin_fractal_max (world->terrain_params.erosion_perlin.octaves, world->terrain_params.erosion_perlin.persistance);
-    f32 peaks_and_valleys_max = perlin_fractal_max (world->terrain_params.peaks_and_valleys_perlin.octaves, world->terrain_params.peaks_and_valleys_perlin.persistance);
-
-    for_range (x, 0, Chunk_Size)
-    {
-        for_range (z, 0, Chunk_Size)
-        {
-            f64 perlin_x = cast (f64) (x + chunk->x * Chunk_Size);
-            f64 perlin_z = cast (f64) (z + chunk->z * Chunk_Size);
-
-            auto values = &chunk->terrain_values[x * Chunk_Size + z];
-            values->continentalness_noise = perlin_fractal_noise (world->terrain_params.continentalness_perlin, world->continentalness_offsets, perlin_x, perlin_z);
-            values->continentalness_noise = inverse_lerp (-continentalness_max, continentalness_max, values->continentalness_noise);
-
-            values->continentalness_bezier = bezier_cubic_calculate (
-                world->terrain_params.continentalness_bezier_point_count,
-                world->terrain_params.continentalness_bezier_points,
-                values->continentalness_noise).y;
-
-            values->erosion_noise = perlin_fractal_noise (world->terrain_params.erosion_perlin, world->erosion_offsets, perlin_x, perlin_z);
-            values->erosion_noise = inverse_lerp (-erosion_max, erosion_max, values->erosion_noise);
-
-            values->erosion_bezier = bezier_cubic_calculate (
-                world->terrain_params.erosion_bezier_point_count,
-                world->terrain_params.erosion_bezier_points,
-                values->erosion_noise).y;
-
-            values->peaks_and_valleys_noise = perlin_fractal_noise (world->terrain_params.peaks_and_valleys_perlin, world->peaks_and_valleys_offsets, perlin_x, perlin_z);
-            values->peaks_and_valleys_noise = inverse_lerp (-peaks_and_valleys_max, peaks_and_valleys_max, values->peaks_and_valleys_noise);
-
-            values->peaks_and_valleys_bezier = bezier_cubic_calculate (
-                world->terrain_params.peaks_and_valleys_bezier_point_count,
-                world->terrain_params.peaks_and_valleys_bezier_points,
-                values->peaks_and_valleys_noise).y;
-        }
-    }
-
-    for_range (i, 0, Chunk_Size)
-    {
-        for_range (j, 0, Chunk_Height)
-        {
-            for_range (k, 0, Chunk_Size)
-            {
-                f64 x = cast (f64) (chunk->x * Chunk_Size + i);
-                f64 y = cast (f64) j;
-                f64 z = cast (f64) (chunk->z * Chunk_Size + k);
-                f64 perlin_x = x + offset_x;
-                f64 perlin_y = y + offset_y;
-                f64 perlin_z = z + offset_z;
-
-                s64 index = chunk_block_index (i, j, k);
-
-                auto terrain_values = &chunk->terrain_values[i * Chunk_Size + k];
-                f32 surface_level = (terrain_values->bezier_values[0] * world->terrain_params.influences[0]
-                    + terrain_values->bezier_values[1] * world->terrain_params.influences[1]
-                    + terrain_values->bezier_values[2] * world->terrain_params.influences[2]) / 3;
-                surface_level = lerp (
-                    cast (f32) world->terrain_params.height_range.x,
-                    cast (f32) world->terrain_params.height_range.y,
-                    surface_level
-                );
-
-                if (j == 0)
-                {
-                    chunk->blocks[index].type = Block_Type_Bedrock;
-                }
-                else if (y > surface_level)
-                {
-                    if (y <= world->terrain_params.water_level)
-                        chunk->blocks[index].type = Block_Type_Water;
-                    else
-                        chunk->blocks[index].type = Block_Type_Air;
-                }
-                else if (y > surface_level - Surface_Dirt_Height)
-                {
-                    chunk->blocks[index].type = Block_Type_Dirt;
-                }
-                else
-                {
-                    //auto val = perlin_noise (perlin_x * Cavern_Scale, perlin_y * Cavern_Scale, perlin_z * Cavern_Scale);
-                    //if (val < 0.2)
-                    //    chunk->blocks[index].type = Block_Type_Air;
-                    //else
-                        chunk->blocks[index].type = Block_Type_Stone;
                 }
             }
         }
@@ -397,19 +298,24 @@ void push_block (Array<Vertex> *vertices, u8 id, const Vec3f &position, Block_Fa
     }
 }
 
-void chunk_generate_mesh_data (Chunk *chunk)
+inline
+bool block_is_of_mesh_type (Block_Type block, Chunk_Mesh_Type mesh_type)
+{
+    switch (mesh_type)
+    {
+    case Chunk_Mesh_Solid:
+        return block != Block_Type_Water && block != Block_Type_Air;
+    case Chunk_Mesh_Water:
+        return block == Block_Type_Water;
+    default:
+        return false;
+    }
+}
+
+void chunk_generate_mesh_data (Chunk *chunk, Array<Vertex> *vertices, Chunk_Mesh_Type type)
 {
     if (!chunk->is_dirty)
        return;
-
-    auto state = arena_get_state (&frame_arena);
-    defer (arena_set_state (&frame_arena, state));
-
-    Array<Vertex> vertices;
-    array_init (&vertices, frame_allocator, 12000);
-
-    defer (chunk->vertex_count = vertices.count);
-    defer (chunk->is_dirty = false);
 
     Vec3f position = {cast (f32) chunk->x * Chunk_Size, 0, cast (f32) chunk->z * Chunk_Size};
     for_range (x, 0, Chunk_Size)
@@ -419,35 +325,58 @@ void chunk_generate_mesh_data (Chunk *chunk)
             for_range (z, 0, Chunk_Size)
             {
                 auto block = chunk_get_block_in_chunk (chunk, x, y, z);
-                if (block.type == Block_Type_Air)
+                if (!block_is_of_mesh_type (block.type, type))
                     continue;
 
                 Block_Face_Flags visible_faces = 0;
-                if (chunk_get_block (chunk, x + 1, y, z).type == Block_Type_Air)
+                if (!block_is_of_mesh_type (chunk_get_block (chunk, x + 1, y, z).type, type))
                     visible_faces |= Block_Face_Flag_East;
-                if (chunk_get_block (chunk, x - 1, y, z).type == Block_Type_Air)
+                if (!block_is_of_mesh_type (chunk_get_block (chunk, x - 1, y, z).type, type))
                     visible_faces |= Block_Face_Flag_West;
-                if (chunk_get_block (chunk, x, y + 1, z).type == Block_Type_Air)
+                if (!block_is_of_mesh_type (chunk_get_block (chunk, x, y + 1, z).type, type))
                     visible_faces |= Block_Face_Flag_Above;
-                if (chunk_get_block (chunk, x, y - 1, z).type == Block_Type_Air)
+                if (!block_is_of_mesh_type (chunk_get_block (chunk, x, y - 1, z).type, type))
                     visible_faces |= Block_Face_Flag_Below;
-                if (chunk_get_block (chunk, x, y, z + 1).type == Block_Type_Air)
+                if (!block_is_of_mesh_type (chunk_get_block (chunk, x, y, z + 1).type, type))
                     visible_faces |= Block_Face_Flag_North;
-                if (chunk_get_block (chunk, x, y, z - 1).type == Block_Type_Air)
+                if (!block_is_of_mesh_type (chunk_get_block (chunk, x, y, z - 1).type, type))
                     visible_faces |= Block_Face_Flag_South;
 
-                push_block (&vertices, cast (u8) block.type, position + Vec3f{cast (f32) x, cast (f32) y, cast (f32) z}, visible_faces);
+                push_block (vertices, cast (u8) block.type, position + Vec3f{cast (f32) x, cast (f32) y, cast (f32) z}, visible_faces);
             }
         }
     }
+}
 
-    glBindVertexArray (chunk->opengl_is_stupid_vao);
-    glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
+void chunk_generate_mesh_data (Chunk *chunk)
+{
+    if (!chunk->is_dirty)
+        return;
+    defer (chunk->is_dirty = false);
 
-    glBufferData (GL_ARRAY_BUFFER, sizeof (Vertex) * vertices.count, vertices.data, GL_DYNAMIC_DRAW);
+    auto state = arena_get_state (&frame_arena);
+    defer (arena_set_state (&frame_arena, state));
 
-    glBindVertexArray (0);
-    glBindBuffer (GL_ARRAY_BUFFER, 0);
+    Array<Vertex> vertices;
+    array_init (&vertices, frame_allocator, 12000);
+
+    chunk->total_vertex_count = 0;
+    for_range (i, 0, Chunk_Mesh_Count)
+    {
+        chunk_generate_mesh_data (chunk, &vertices, cast (Chunk_Mesh_Type) i);
+        chunk->vertex_counts[i] = vertices.count;
+        chunk->total_vertex_count += vertices.count;
+
+        glBindVertexArray (chunk->opengl_is_stupid_vaos[i]);
+        glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbos[i]);
+
+        glBufferData (GL_ARRAY_BUFFER, sizeof (Vertex) * vertices.count, vertices.data, GL_DYNAMIC_DRAW);
+
+        glBindVertexArray (0);
+        glBindBuffer (GL_ARRAY_BUFFER, 0);
+
+        array_clear (&vertices);
+    }
 }
 
 u32 hash_vec2i (const Vec2i &v)

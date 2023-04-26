@@ -212,15 +212,15 @@ bool load_texture_atlas (const char *textures_dirname)
     return true;
 }
 
-void chunk_draw (Chunk *chunk, Camera *camera)
+void chunk_draw (Chunk *chunk, Camera *camera, Chunk_Mesh_Type mesh_type)
 {
-    if (chunk->vertex_count == 0)
+    if (chunk->vertex_counts[mesh_type] == 0)
         return;
 
-    glBindVertexArray (chunk->opengl_is_stupid_vao);
-    glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbo);
+    glBindVertexArray (chunk->opengl_is_stupid_vaos[mesh_type]);
+    glBindBuffer (GL_ARRAY_BUFFER, chunk->gl_vbos[mesh_type]);
 
-    glDrawArrays (GL_TRIANGLES, 0, chunk->vertex_count);
+    glDrawArrays (GL_TRIANGLES, 0, chunk->vertex_counts[mesh_type]);
 
     glBindBuffer (GL_ARRAY_BUFFER, 0);
     glBindVertexArray (0);
@@ -228,16 +228,8 @@ void chunk_draw (Chunk *chunk, Camera *camera)
 
 void world_draw_chunks (World *world, Camera *camera)
 {
-    glActiveTexture (0);
-    glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
-
-    glUseProgram (g_block_shader);
-
-    auto loc = glGetUniformLocation (g_block_shader, "u_View_Projection_Matrix");
-    glUniformMatrix4fv (loc, 1, GL_TRUE, camera->view_projection_matrix.comps);
-
-    loc = glGetUniformLocation (g_block_shader, "u_Texture_Atlas");
-    glUniform1i (loc, 0);
+    Array<Chunk *> chunks_to_draw;
+    array_init (&chunks_to_draw, frame_allocator);
 
     g_drawn_vertex_count = 0;
     for_hash_map (it, world->all_loaded_chunks)
@@ -250,8 +242,24 @@ void world_draw_chunks (World *world, Camera *camera)
         if (distance (world_chunk_pos, camera_planar_pos) < cast (f64) g_render_distance * Chunk_Size)
         {
             chunk_generate_mesh_data (chunk);
-            chunk_draw (chunk, &g_camera);
-            g_drawn_vertex_count += chunk->vertex_count;
+            array_push (&chunks_to_draw, chunk);
+            g_drawn_vertex_count += chunk->total_vertex_count;
         }
+    }
+    glActiveTexture (0);
+    glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
+
+    glUseProgram (g_block_shader);
+
+    auto loc = glGetUniformLocation (g_block_shader, "u_View_Projection_Matrix");
+    glUniformMatrix4fv (loc, 1, GL_TRUE, camera->view_projection_matrix.comps);
+
+    loc = glGetUniformLocation (g_block_shader, "u_Texture_Atlas");
+    glUniform1i (loc, 0);
+
+    for_range (mesh_type, 0, Chunk_Mesh_Count)
+    {
+        for_array (i, chunks_to_draw)
+            chunk_draw (chunks_to_draw[i], &g_camera, cast (Chunk_Mesh_Type) mesh_type);
     }
 }

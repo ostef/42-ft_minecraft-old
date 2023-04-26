@@ -365,6 +365,13 @@ struct Terrain_Params
     int water_level = Default_Water_Level;
 };
 
+enum Chunk_Mesh_Type : u8
+{
+    Chunk_Mesh_Solid,
+    Chunk_Mesh_Water,
+    Chunk_Mesh_Count,
+};
+
 struct Chunk
 {
     Chunk *east;
@@ -374,9 +381,10 @@ struct Chunk
 
     s64 x, z;
 
-    s64 vertex_count;
-    GLuint gl_vbo;
-    GLuint opengl_is_stupid_vao;
+    s64 total_vertex_count;
+    s64 vertex_counts[Chunk_Mesh_Count];
+    GLuint gl_vbos[Chunk_Mesh_Count];
+    GLuint opengl_is_stupid_vaos[Chunk_Mesh_Count];
     bool is_dirty;
     bool generated;
 

@@ -19,7 +19,7 @@ s64 g_chunk_creation_samples = 0;
 s64 g_drawn_vertex_count = 0;
 s64 g_delta_time = 0;
 
-bool g_generate_new_chunks = false;
+bool g_generate_new_chunks = true;
 int g_render_distance = 12;
 
 bool g_show_ui = true;
