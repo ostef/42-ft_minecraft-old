@@ -51,6 +51,13 @@ namespace ImGuiExt
 {
     bool IsItemDoubleClicked (ImGuiMouseButton mouse_button = 0);
 
+    float HermiteCubicCalculate (float x0, float y0, float der0, float x1, float y1, float der1, float t);
+
+    void AddHermiteCubic (ImDrawList *draw_list,
+        const ImVec2 &offset, const ImVec2 &scale,
+        float x0, float y0, float der0, float x1, float y1, float der1,
+        ImU32 color, float thickness = 1.0f, int num_segments = 64);
+
     #define ImGuiExt_BezierSpline_PointCountFromCurveCount(n) (3 * (n) + 1)
     #define ImGuiExt_BezierSpline_CurveCountFromPointCount(n) (((n) - 1) / 3)
 

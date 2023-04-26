@@ -106,11 +106,6 @@ namespace ImGuiExt
        s64 selected_knot;
    };
 
-    void AddHermiteCubic (ImDrawList *draw_list,
-        const ImVec2 &offset, const ImVec2 &scale,
-        f32 x0, f32 y0, f32 der0, f32 x1, f32 y1, f32 der1,
-        ImU32 color, float thickness = 1.0f, int num_segments = 64);
-
     bool NestedHermiteSplineEditor (const char *str_id, const ImVec2 &size, NestedHermiteSplineEditorData *data, const Slice<f32> &t_values,
        const char *zero_separated_t_value_names = null);
 

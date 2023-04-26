@@ -11,6 +11,38 @@ namespace ImGuiExt
         return ImGui::IsItemHovered () && ImGui::IsMouseDoubleClicked (mouse_button);
     }
 
+    float HermiteCubicCalculate (float x0, float y0, float der0, float x1, float y1, float der1, float t)
+    {
+        float f8 = der0 * (x1 - x0) - (y1 - y0);
+        float f9 = -der1 * (x1 - x0) + (y1 - y0);
+
+        return ImLerp (y0, y1, t) + t * (1 - t) * ImLerp (f8, f9, t);
+    }
+
+    void AddHermiteCubic (ImDrawList *draw_list,
+        const ImVec2 &offset, const ImVec2 &scale,
+        float x0, float y0, float der0, float x1, float y1, float der1,
+        ImU32 color, float thickness, int num_segments)
+    {
+        if ((color & IM_COL32_A_MASK) == 0)
+            return;
+
+        ImVec2 p0;
+        p0.x = offset.x + x0 * scale.x;
+        p0.y = offset.y + y0 * scale.y;
+
+        draw_list->PathLineTo (p0);
+        float t_step = 1.0f / (float)num_segments;
+        for (int i_step = 1; i_step <= num_segments; i_step += 1)
+        {
+            ImVec2 p;
+            p.x = offset.x + ImLerp (x0, x1, t_step * i_step) * scale.x;
+            p.y = offset.y + HermiteCubicCalculate (x0, y0, der0, x1, y1, der1, t_step * i_step) * scale.y;
+            draw_list->_Path.push_back (p);
+        }
+        draw_list->PathStroke (color, 0, thickness);
+    }
+
     static const float BezierSplineEditor_GrabRadius = 8;
 
     bool BezierSplinePoint (ImGuiID id, const ImRect &bounds, ImVec2 *point)
