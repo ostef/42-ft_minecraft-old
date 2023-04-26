@@ -80,7 +80,8 @@ void main ()
 {
     vec3 light_direction = normalize (vec3 (0.5, 1, 0.2));
     vec4 sampled = texture (u_Texture_Atlas, Tex_Coords);
-    Frag_Color = sampled * max (dot (Normal, light_direction), 0.25);
+    Frag_Color.rgb = sampled.rgb * max (dot (Normal, light_direction), 0.25);
+    Frag_Color.a = sampled.a;
 }
 )""";
 
@@ -246,6 +247,10 @@ void world_draw_chunks (World *world, Camera *camera)
             g_drawn_vertex_count += chunk->total_vertex_count;
         }
     }
+
+    glEnable (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glActiveTexture (0);
     glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
 
