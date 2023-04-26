@@ -778,19 +778,50 @@ void ui_show_cubiomes_viewer (bool *opened)
     ImGui::End ();
 }
 
+void calculate_spline_range (Nested_Hermite_Spline *sp, Vec2f *x, Vec2f *y)
+{
+    for_array (i, sp->knots)
+    {
+        if (sp->knots[i].x < x->x)
+            x->x = sp->knots[i].x;
+        if (sp->knots[i].x > x->y)
+            x->y = sp->knots[i].x;
+
+        if (sp->knots[i].is_nested_spline)
+        {
+            calculate_spline_range (sp->knots[i].spline, x, y);
+        }
+        else
+        {
+            if (sp->knots[i].y < y->x)
+                y->x = sp->knots[i].y;
+            if (sp->knots[i].y > y->y)
+                y->y = sp->knots[i].y;
+        }
+    }
+}
+
 void convert_cubiome_spline (cubiome::Spline *cub_sp, Nested_Hermite_Spline *sp)
 {
+    f32 x_min = F32_MAX;
+    f32 x_max = -F32_MAX;
+    for_range (i, 0, cub_sp->len)
+    {
+        x_max = max (cub_sp->loc[i], x_max);
+        x_min = min (cub_sp->loc[i], x_min);
+    }
+
     sp->t_value_index = cub_sp->typ;
     for_range (i, 0, cub_sp->len)
     {
         Nested_Hermite_Spline::Knot knot {};
         knot.derivative = cub_sp->der[i];
-        knot.x = (cub_sp->loc[i] + 1) * 0.5;
+        knot.x = inverse_lerp (x_min, x_max, cub_sp->loc[i]);
 
-        if (cub_sp->val[i]->len == 1)
+        if (cub_sp->val[i]->len <= 1)
         {
             knot.y = (cast (cubiome::FixSpline *) cub_sp->val[i])->val;
-            knot.y = (knot.y + 1) * 0.5;
+            knot.y = (knot.y + 1) * 0.5f;
         }
         else
         {
@@ -800,6 +831,17 @@ void convert_cubiome_spline (cubiome::Spline *cub_sp, Nested_Hermite_Spline *sp)
         }
 
         array_push (&sp->knots, knot);
+    }
+}
+
+void fix_spline_range (Nested_Hermite_Spline *sp, f32 x_min, f32 x_max, f32 y_min, f32 y_max)
+{
+    for_array (i, sp->knots)
+    {
+        //sp->knots[i].x = inverse_lerp (x_min, x_max, sp->knots[i].x);
+        sp->knots[i].y = inverse_lerp (y_min, y_max, sp->knots[i].y);
+        if (sp->knots[i].is_nested_spline)
+            fix_spline_range (sp->knots[i].spline, x_min, x_max, y_min, y_max);
     }
 }
 
@@ -872,6 +914,11 @@ void ui_show_windows ()
             cubiome::Generator gen;
             cubiome::setupGenerator (&gen, cubiome::MC_1_20, 0);
             convert_cubiome_spline (gen.bn.sp, &root_spline);
+
+            Vec2f x_range = {F32_MAX, -F32_MAX};
+            Vec2f y_range = {F32_MAX, -F32_MAX};
+            calculate_spline_range (&root_spline, &x_range, &y_range);
+            fix_spline_range (&root_spline, x_range.x, x_range.y, y_range.x, y_range.y);
         }
 
         static f32 t_values[4];
