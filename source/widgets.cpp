@@ -10,30 +10,6 @@ namespace ImGuiExt
 
 static const f32 NestedHermiteSplineEditor_GrabRadius = 8;
 
-void AddHermiteCubic (ImDrawList *draw_list,
-    const ImVec2 &offset, const ImVec2 &scale,
-    f32 x0, f32 y0, f32 der0, f32 x1, f32 y1, f32 der1,
-    ImU32 color, float thickness, int num_segments)
-{
-    if ((color & IM_COL32_A_MASK) == 0)
-        return;
-
-    ImVec2 p0;
-    p0.x = offset.x + x0 * scale.x;
-    p0.y = offset.y + y0 * scale.y;
-
-    draw_list->PathLineTo (p0);
-    f32 t_step = 1.0f / cast (f32) num_segments;
-    for (int i_step = 1; i_step <= num_segments; i_step += 1)
-    {
-        ImVec2 p;
-        p.x = offset.x + lerp (x0, x1, t_step * i_step) * scale.x;
-        p.y = offset.y + hermite_cubic_calculate (x0, y0, der0, x1, y1, der1, lerp (x0, x1, t_step * i_step)) * scale.y;
-        draw_list->_Path.push_back (p);
-    }
-    draw_list->PathStroke (color, 0, thickness);
-}
-
 bool NestedHermiteSplineMovePoint (int index, const ImRect &bounds, f32 *x, f32 *y, bool move_x, bool move_y)
 {
     ImVec2 point_center = bounds.Min + ImVec2{*x, 1 - *y} * (bounds.Max - bounds.Min);
