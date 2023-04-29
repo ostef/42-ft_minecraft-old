@@ -20,7 +20,7 @@ s64 g_drawn_vertex_count = 0;
 s64 g_delta_time = 0;
 
 bool g_generate_new_chunks = true;
-int g_render_distance = 12;
+int g_render_distance = 4;
 
 bool g_show_ui = true;
 
@@ -244,13 +244,7 @@ int main (int argc, const char **args)
     glEnable (GL_CULL_FACE);
     glFrontFace (GL_CW);
 
-    if (!load_texture_atlas ("data/textures"))
-    {
-        println ("Error: could not load textures");
-        return 1;
-    }
-
-    if (!render_init ())
+    if (!render_init ("data/textures"))
     {
         println ("Could not initialize rendering system");
         return 1;

@@ -3,17 +3,26 @@
 GLuint g_block_shader;
 GLuint g_texture_atlas;
 s64 g_texture_atlas_size;
+s64 g_atlas_cell_count;
 
-const char *GL_Block_Shader_Vertex = R"""(
+static const int Atlas_Cell_Size_No_Border = 16;
+static const int Atlas_Cell_Border_Size = 1;
+static const int Atlas_Cell_Size = Atlas_Cell_Size_No_Border + Atlas_Cell_Border_Size * 2;
+
+const char *GL_Block_Shader_Header = R"""(
 #version 330 core
 
+const int Atlas_Cell_Size_No_Border = %d;
+const int Atlas_Cell_Border_Size = %d;
+const int Atlas_Cell_Size = Atlas_Cell_Size_No_Border + Atlas_Cell_Border_Size * 2;
+const int Atlas_Cell_Count = %d;
+)""";
+
+const char *GL_Block_Shader_Vertex = R"""(
 layout (location = 0) in vec3 a_Position;
 layout (location = 1) in int a_Face;
 layout (location = 2) in int a_Block_Id;
 layout (location = 3) in int a_Block_Corner;
-
-const int Atlas_Cell_Size_No_Border = 16;
-const int Atlas_Cell_Size = Atlas_Cell_Size_No_Border + 2;
 
 const int Block_Face_East  = 0; // +X
 const int Block_Face_West  = 1; // -X
@@ -28,7 +37,7 @@ const int Block_Corner_Bottom_Left  = 2;
 const int Block_Corner_Bottom_Right = 3;
 
 out vec3 Normal;
-out vec2 Tex_Coords;
+centroid out vec2 Tex_Coords;
 
 uniform mat4 u_View_Projection_Matrix;
 uniform sampler2D u_Texture_Atlas;
@@ -47,11 +56,10 @@ void main ()
     case Block_Face_South: Normal = vec3 (0, 0, -1); break;
     }
 
-    int atlas_size = textureSize (u_Texture_Atlas, 0).x / Atlas_Cell_Size;    // Assume width == height
-    int atlas_cell_x = a_Block_Id % atlas_size;
-    int atlas_cell_y = a_Block_Id / atlas_size;
-    int atlas_tex_x = atlas_cell_x * Atlas_Cell_Size + 1;
-    int atlas_tex_y = atlas_cell_y * Atlas_Cell_Size + 1;
+    int atlas_cell_x = a_Block_Id % Atlas_Cell_Count;
+    int atlas_cell_y = a_Block_Id / Atlas_Cell_Count;
+    int atlas_tex_x = atlas_cell_x * Atlas_Cell_Size + Atlas_Cell_Border_Size;
+    int atlas_tex_y = atlas_cell_y * Atlas_Cell_Size + Atlas_Cell_Border_Size;
 
     switch (a_Block_Corner)
     {
@@ -61,16 +69,15 @@ void main ()
     case Block_Corner_Bottom_Right: atlas_tex_x += Atlas_Cell_Size_No_Border; atlas_tex_y += Atlas_Cell_Size_No_Border; break;
     }
 
-    Tex_Coords.x = float (atlas_tex_x) / float (atlas_size * Atlas_Cell_Size);
-    Tex_Coords.y = float (atlas_tex_y) / float (atlas_size * Atlas_Cell_Size);
+    ivec2 atlas_size = textureSize (u_Texture_Atlas, 0);
+    Tex_Coords.x = float (atlas_tex_x) / float (atlas_size.x);
+    Tex_Coords.y = float (atlas_tex_y) / float (atlas_size.y);
 }
 )""";
 
 const char *GL_Block_Shader_Fragment = R"""(
-#version 330 core
-
 in vec3 Normal;
-in vec2 Tex_Coords;
+centroid in vec2 Tex_Coords;
 
 out vec4 Frag_Color;
 
@@ -80,13 +87,20 @@ void main ()
 {
     vec3 light_direction = normalize (vec3 (0.5, 1, 0.2));
     vec4 sampled = texture (u_Texture_Atlas, Tex_Coords);
+    // vec4 sampled = textureLod (u_Texture_Atlas, Tex_Coords, 1);
     Frag_Color.rgb = sampled.rgb * max (dot (Normal, light_direction), 0.25);
     Frag_Color.a = sampled.a;
 }
 )""";
 
-bool render_init ()
+bool render_init (const char *textures_dirname)
 {
+    if (!load_texture_atlas (textures_dirname))
+    {
+        println ("Error: could not load textures");
+        return false;
+    }
+
     GLuint vertex_shader = glCreateShader (GL_VERTEX_SHADER);
     defer (glDeleteShader (vertex_shader));
 
@@ -96,7 +110,11 @@ bool render_init ()
     int status;
     char info_log[4096];
 
-    glShaderSource (vertex_shader, 1, &GL_Block_Shader_Vertex, null);
+    const char *shader_header = fcstring (frame_allocator, GL_Block_Shader_Header, Atlas_Cell_Size_No_Border, Atlas_Cell_Border_Size, g_atlas_cell_count);
+    const char *vertex_shader_source = fcstring (frame_allocator, "%s\n%s", shader_header, GL_Block_Shader_Vertex);
+    const char *fragment_shader_source = fcstring (frame_allocator, "%s\n%s", shader_header, GL_Block_Shader_Fragment);
+
+    glShaderSource (vertex_shader, 1, &vertex_shader_source, null);
     glCompileShader (vertex_shader);
     glGetShaderiv (vertex_shader, GL_COMPILE_STATUS, &status);
     if (!status)
@@ -107,7 +125,7 @@ bool render_init ()
         return false;
     }
 
-    glShaderSource (fragment_shader, 1, &GL_Block_Shader_Fragment, null);
+    glShaderSource (fragment_shader, 1, &fragment_shader_source, null);
     glCompileShader (fragment_shader);
     glGetShaderiv (fragment_shader, GL_COMPILE_STATUS, &status);
     if (!status)
@@ -134,14 +152,123 @@ bool render_init ()
     return true;
 }
 
-static const int Atlas_Cell_Size = 18;
-static const int Atlas_Cell_Size_No_Border = Atlas_Cell_Size - 2;
-
-void copy_row_into_texture_atlas (u32 *dest, u32 *src, int dest_row, int dest_x, int src_row, int src_width)
+u32 image_sample_averaged (const Image &tex, int sample_size, f32 x, f32 y)
 {
-    dest[dest_row * g_texture_atlas_size + dest_x] = src[src_row * src_width];
-    memcpy (dest + dest_row * g_texture_atlas_size + dest_x + 1, src + src_row * src_width, src_width * sizeof (s32));
-    dest[dest_row * g_texture_atlas_size + dest_x + Atlas_Cell_Size - 1] = src[src_row * src_width + src_width - 1];
+    x = clamp (x, 0.0f, 1.0f);
+    y = clamp (y, 0.0f, 1.0f);
+
+    x *= tex.width;
+    y *= tex.height;
+
+    int r = 0;
+    int g = 0;
+    int b = 0;
+    int a = 0;
+    for_range (sy, 0, sample_size)
+    {
+        for_range (sx, 0, sample_size)
+        {
+            int ix = cast (int) x + sx - sample_size / 2;
+            int iy = cast (int) y + sy - sample_size / 2;
+            ix = clamp (ix, 0, tex.width - 1);
+            iy = clamp (iy, 0, tex.height - 1);
+
+            u32 val = tex.data[iy * tex.width + ix];
+            int sample_a = cast (f32) ((val >> 24) & 0xff);
+            int sample_b = cast (f32) ((val >> 16) & 0xff);
+            int sample_g = cast (f32) ((val >>  8) & 0xff);
+            int sample_r = cast (f32) ((val >>  0) & 0xff);
+
+            r += sample_r;
+            g += sample_g;
+            b += sample_b;
+            a += sample_a;
+        }
+    }
+
+    r /= sample_size * sample_size;
+    g /= sample_size * sample_size;
+    b /= sample_size * sample_size;
+    a /= sample_size * sample_size;
+
+    u32 val =
+          (cast (u32) a << 24)
+        | (cast (u32) b << 16)
+        | (cast (u32) g <<  8)
+        | (cast (u32) r <<  0);
+
+    return val;
+}
+
+inline
+u32 image_get_pixel (const Image *img, int x, int y)
+{
+    assert (x >= 0 && x < img->width, "Texture index out of bounds (got %d, expected [0;%d])", x, img->width - 1);
+    assert (y >= 0 && y < img->height, "Texture index out of bounds (got %d, expected [0;%d])", y, img->height - 1);
+
+    return img->data[y * img->width + x];
+}
+
+inline
+void image_set_pixel (Image *img, int x, int y, u32 val)
+{
+    assert (x >= 0 && x < img->width, "Texture index out of bounds (got %d, expected [0;%d])", x, img->width - 1);
+    assert (y >= 0 && y < img->height, "Texture index out of bounds (got %d, expected [0;%d])", y, img->height - 1);
+
+    img->data[y * img->width + x] = val;
+}
+
+void copy_image_to_atlas (Image *atlas, const Image &tex, int level, int tex_x, int tex_y, int cell_size_no_border)
+{
+    int cell_size = cell_size_no_border + Atlas_Cell_Border_Size * 2;
+    int sample_size = cast (int) powf (2, cast (f32) level);
+
+    tex_x += Atlas_Cell_Border_Size;
+    tex_y += Atlas_Cell_Border_Size;
+
+    for_range (y, -Atlas_Cell_Border_Size, cell_size_no_border + Atlas_Cell_Border_Size)
+    {
+        for_range (x, -Atlas_Cell_Border_Size, cell_size_no_border + Atlas_Cell_Border_Size)
+        {
+            f32 sample_x = x / cast (f32) cell_size_no_border;
+            f32 sample_y = y / cast (f32) cell_size_no_border;
+
+            if (x < 0 || x >= cell_size_no_border || y < 0 || y >= cell_size_no_border)
+            {
+                int xx = clamp (cast (int) sample_x * tex.width, 0, tex.width - 1);
+                int yy = clamp (cast (int) sample_y * tex.height, 0, tex.height - 1);
+
+                u32 val = image_get_pixel (&tex, xx, yy);
+                image_set_pixel (atlas, tex_x + x, tex_y + y, val);
+            }
+            else
+            {
+                u32 val = image_sample_averaged (tex, sample_size, sample_x, sample_y);
+                image_set_pixel (atlas, tex_x + x, tex_y + y, val);
+            }
+        }
+    }
+}
+
+void generate_atlas_mipmap (Image *atlas, const Slice<Image> &textures, int level, int cell_size_no_border, int atlas_cell_count)
+{
+    int cell_size = cell_size_no_border + Atlas_Cell_Border_Size * 2;
+
+    memset (atlas->data, 0, atlas->width * atlas->height * sizeof (u32));
+
+    for_array (i, textures)
+    {
+        int block_id = i + 1;   // Leave one for air
+        int cell_x = block_id % atlas_cell_count;
+        int cell_y = block_id / atlas_cell_count;
+
+        int tex_x = cell_x * cell_size;
+        int tex_y = cell_y * cell_size;
+
+        copy_image_to_atlas (atlas, textures[i], level, tex_x, tex_y, cell_size_no_border);
+    }
+
+    glTexImage2D (GL_TEXTURE_2D, level, GL_RGBA, atlas->width, atlas->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas->data);
 }
 
 bool load_texture_atlas (const char *textures_dirname)
@@ -159,56 +286,85 @@ bool load_texture_atlas (const char *textures_dirname)
 
     static const int Texture_Count = array_size (Texture_Names);
 
-    int atlas_cell_count = cast (int) ceil (sqrt (Texture_Count + 1));
-    // We add 2 pixels to apply a border to prevent seams from appearing
-    // when we render the textured blocks
-    g_texture_atlas_size = Atlas_Cell_Size * atlas_cell_count;
+    // In OpenGL, mipmap sizes MUST BE half the size of the previous mipmap level, rounded down.
+    // For this reason, the size of the atlas needs to be a power of two, so that it is divisble
+    // by two all the way down to one, otherwise we won't be able to add a border for each tile
+    // in the atlas for all the mipmap levels
+
+    g_atlas_cell_count = cast (int) ceil (sqrt (Texture_Count + 1));
+    g_texture_atlas_size = Atlas_Cell_Size * g_atlas_cell_count;
+    println ("Original size: %lld", g_texture_atlas_size);
+    {
+        int power = 1;
+        while (power <= g_texture_atlas_size)
+            power *= 2;
+        g_texture_atlas_size = power;
+    }
+
+    //int mipmap_count = cast (int) sqrt (cast (f32) Atlas_Cell_Size_No_Border) + 1;
+    int mipmap_count = 1;
+
     u32 *atlas_data = mem_alloc_typed (u32, g_texture_atlas_size * g_texture_atlas_size, heap_allocator ());
     defer (mem_free (atlas_data, heap_allocator ()));
 
-    println ("Texture atlas size: %i cells, %i x %i pixels", atlas_cell_count, g_texture_atlas_size, g_texture_atlas_size);
+    Image textures[Texture_Count] = {};
+    defer (
+        for_range (i, 0, Texture_Count)
+            stbi_image_free (textures[i].data);
+    );
+
+    glGenTextures (1, &g_texture_atlas);
+    glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    // glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipmap_count - 1);
+    // glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 1);
 
     for_range (i, 0, Texture_Count)
     {
         int w, h;
-        auto data = cast (u32 *) stbi_load (fcstring (frame_allocator, "%s/%s", textures_dirname, Texture_Names[i]), &w, &h, null, 4);
+        const char *filename = fcstring (frame_allocator, "%s/%s", textures_dirname, Texture_Names[i]);
+        textures[i].data = cast (u32 *) stbi_load (filename, &w, &h, null, 4);
+        textures[i].width = w;
+        textures[i].height = h;
 
-        if (!data)
+        if (!textures[i].data)
         {
             println ("Error: could not load texture %s", Texture_Names[i]);
             return false;
         }
-
-        defer (stbi_image_free (data));
 
         if (w != Atlas_Cell_Size_No_Border || h != Atlas_Cell_Size_No_Border)
         {
             println ("Error: texture %s dimensions are invalid. All textures must be %d by %d", Texture_Names[i], Atlas_Cell_Size_No_Border, Atlas_Cell_Size_No_Border);
             return false;
         }
-
-        int block_id = i + 1;   // Leave one for air
-        int cell_x = block_id % atlas_cell_count;
-        int cell_y = block_id / atlas_cell_count;
-        int tex_x = cell_x * Atlas_Cell_Size;
-        int tex_y = cell_y * Atlas_Cell_Size;
-
-        copy_row_into_texture_atlas (atlas_data, data, tex_y, tex_x, 0, w);
-
-        for_range (row, 0, h)
-            copy_row_into_texture_atlas (atlas_data, data, tex_y + 1 + row, tex_x, row, w);
-
-        copy_row_into_texture_atlas (atlas_data, data, tex_y + Atlas_Cell_Size - 1, tex_x, h - 1, w);
     }
 
-    glGenTextures (1, &g_texture_atlas);
-    glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, g_texture_atlas_size, g_texture_atlas_size, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas_data);
+    Image mipmap;
+    mipmap.width  = g_texture_atlas_size;
+    mipmap.height = g_texture_atlas_size;
+    mipmap.data = atlas_data;
+
+    int mipmap_cell_size = Atlas_Cell_Size_No_Border;
+    for_range (i, 0, mipmap_count)
+    {
+        println ("Mipmap %d size: %d", i, mipmap.width);
+
+        generate_atlas_mipmap (&mipmap, slice_make (Texture_Count, textures), i, mipmap_cell_size, g_atlas_cell_count);
+
+        mipmap_cell_size /= 2;
+        mipmap.width  /= 2;
+        mipmap.height /= 2;
+    }
+
     glBindTexture (GL_TEXTURE_2D, 0);
+
+    println ("Texture atlas size: %i cells, %i x %i pixels", g_atlas_cell_count, g_texture_atlas_size, g_texture_atlas_size);
 
     return true;
 }

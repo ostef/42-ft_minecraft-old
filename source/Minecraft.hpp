@@ -127,6 +127,13 @@ namespace ImGuiExt
 
 }
 
+struct Image
+{
+    s32 width;
+    s32 height;
+    u32 *data;
+};
+
 bool load_texture_atlas (const char *texture_dirname);
 
 struct Camera
@@ -185,7 +192,7 @@ struct Vertex
     Block_Corner block_corner;
 };
 
-bool render_init ();
+bool render_init (const char *texture_dirname);
 void draw_chunk (Chunk *chunk, Camera *camera);
 
 enum Block_Type : u8
