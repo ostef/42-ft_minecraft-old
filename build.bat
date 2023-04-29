@@ -26,7 +26,7 @@ set compiler_defines=
 set compiler_includes= /Isource\ /Ithird_party\ /Ithird_party\glad\include\ /Ithird_party\glfw-3.3.8\include\ /Ithird_party\imgui\
 set compiler_options= %compiler_flags% %compiler_defines% %compiler_includes%
 
-set libs= Shell32.lib Kernel32.lib DbgHelp.lib Opengl32.lib User32.lib Gdi32.lib ^
+set libs= Shell32.lib Kernel32.lib DbgHelp.lib Opengl32.lib User32.lib Gdi32.lib Winmm.lib ^
     third_party\glfw-3.3.8\lib-vc2019\glfw3_mt.lib
 
 set linker_flags= /incremental:no /opt:ref /subsystem:console

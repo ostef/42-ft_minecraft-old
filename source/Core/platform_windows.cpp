@@ -54,6 +54,8 @@ extern "C"
     void Sleep (
         u32 dwMilliseconds
     );
+
+    u32 timeBeginPeriod (u32 uPeriod);
 }
 
 void platform_init ()
@@ -69,6 +71,9 @@ void platform_init ()
 
     if (GetConsoleMode (std_err, &mode))
         SetConsoleMode (std_err, mode | 0x0004);
+
+    // This call is necessary to make sleeping millisecond accurate
+    timeBeginPeriod (1);
 }
 
 s64 time_current_monotonic ()
