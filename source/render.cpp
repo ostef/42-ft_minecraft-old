@@ -6,7 +6,7 @@ s64 g_texture_atlas_size;
 s64 g_atlas_cell_count;
 
 static const int Atlas_Cell_Size_No_Border = 16;
-static const int Atlas_Cell_Border_Size = 1;
+static const int Atlas_Cell_Border_Size = 4;
 static const int Atlas_Cell_Size = Atlas_Cell_Size_No_Border + Atlas_Cell_Border_Size * 2;
 
 const char *GL_Block_Shader_Header = R"""(
@@ -233,19 +233,8 @@ void copy_image_to_atlas (Image *atlas, const Image &tex, int level, int tex_x, 
             f32 sample_x = x / cast (f32) cell_size_no_border;
             f32 sample_y = y / cast (f32) cell_size_no_border;
 
-            if (x < 0 || x >= cell_size_no_border || y < 0 || y >= cell_size_no_border)
-            {
-                int xx = clamp (cast (int) sample_x * tex.width, 0, tex.width - 1);
-                int yy = clamp (cast (int) sample_y * tex.height, 0, tex.height - 1);
-
-                u32 val = image_get_pixel (&tex, xx, yy);
-                image_set_pixel (atlas, tex_x + x, tex_y + y, val);
-            }
-            else
-            {
-                u32 val = image_sample_averaged (tex, sample_size, sample_x, sample_y);
-                image_set_pixel (atlas, tex_x + x, tex_y + y, val);
-            }
+            u32 val = image_sample_averaged (tex, sample_size, sample_x, sample_y);
+            image_set_pixel (atlas, tex_x + x, tex_y + y, val);
         }
     }
 }
@@ -286,23 +275,8 @@ bool load_texture_atlas (const char *textures_dirname)
 
     static const int Texture_Count = array_size (Texture_Names);
 
-    // In OpenGL, mipmap sizes MUST BE half the size of the previous mipmap level, rounded down.
-    // For this reason, the size of the atlas needs to be a power of two, so that it is divisble
-    // by two all the way down to one, otherwise we won't be able to add a border for each tile
-    // in the atlas for all the mipmap levels
-
     g_atlas_cell_count = cast (int) ceil (sqrt (Texture_Count + 1));
     g_texture_atlas_size = Atlas_Cell_Size * g_atlas_cell_count;
-    println ("Original size: %lld", g_texture_atlas_size);
-    {
-        int power = 1;
-        while (power <= g_texture_atlas_size)
-            power *= 2;
-        g_texture_atlas_size = power;
-    }
-
-    //int mipmap_count = cast (int) sqrt (cast (f32) Atlas_Cell_Size_No_Border) + 1;
-    int mipmap_count = 1;
 
     u32 *atlas_data = mem_alloc_typed (u32, g_texture_atlas_size * g_texture_atlas_size, heap_allocator ());
     defer (mem_free (atlas_data, heap_allocator ()));
@@ -315,14 +289,13 @@ bool load_texture_atlas (const char *textures_dirname)
 
     glGenTextures (1, &g_texture_atlas);
     glBindTexture (GL_TEXTURE_2D, g_texture_atlas);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     // glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipmap_count - 1);
-    // glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 1);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Atlas_Cell_Border_Size - 1);
 
     for_range (i, 0, Texture_Count)
     {
@@ -349,19 +322,12 @@ bool load_texture_atlas (const char *textures_dirname)
     mipmap.width  = g_texture_atlas_size;
     mipmap.height = g_texture_atlas_size;
     mipmap.data = atlas_data;
+    generate_atlas_mipmap (&mipmap, slice_make (Texture_Count, textures), 0, Atlas_Cell_Size_No_Border, g_atlas_cell_count);
 
-    int mipmap_cell_size = Atlas_Cell_Size_No_Border;
-    for_range (i, 0, mipmap_count)
-    {
-        println ("Mipmap %d size: %d", i, mipmap.width);
-
-        generate_atlas_mipmap (&mipmap, slice_make (Texture_Count, textures), i, mipmap_cell_size, g_atlas_cell_count);
-
-        mipmap_cell_size /= 2;
-        mipmap.width  /= 2;
-        mipmap.height /= 2;
-    }
-
+    // It seems auto generating the mipmaps is fine for up to a certain level with a certain border size,
+    // so we do that for now. We may manually generate them in the future like we started if it turns out
+    // to not work fine.
+    glGenerateMipmap (GL_TEXTURE_2D);
     glBindTexture (GL_TEXTURE_2D, 0);
 
     println ("Texture atlas size: %i cells, %i x %i pixels", g_atlas_cell_count, g_texture_atlas_size, g_texture_atlas_size);
