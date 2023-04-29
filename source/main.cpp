@@ -24,24 +24,6 @@ int g_render_distance = 12;
 
 bool g_show_ui = true;
 
-f32 hermite_cubic_calculate (f32 x0, f32 y0, f32 der0, f32 x1, f32 y1, f32 der1, f32 t)
-{
-    f32 f = inverse_lerp (x0, x1, t);
-
-    f32 f8 = der0 * (x1 - x0) - (y1 - y0);
-    f32 f9 = -der1 * (x1 - x0) + (y1 - y0);
-
-    return lerp (y0, y1, f) + f * (1 - f) * lerp (f8, f9, f);
-}
-
-f32 hermite_knot_value (const Nested_Hermite_Spline::Knot &knot, const Slice<f32> &t_values)
-{
-    if (knot.is_nested_spline)
-        return hermite_cubic_calculate (knot.spline, t_values);
-
-    return knot.y;
-}
-
 f32 hermite_cubic_calculate (const Nested_Hermite_Spline *spline, const Slice<f32> &t_values)
 {
     f32 t = t_values[spline->t_value_index];
@@ -66,6 +48,7 @@ f32 hermite_cubic_calculate (const Nested_Hermite_Spline *spline, const Slice<f3
         auto knot = spline->knots[index];
         f32 y = hermite_knot_value (knot, t_values);
 
+        // Linearly extend the spline
         return y + knot.derivative * (t - knot.x);
     }
 
@@ -75,7 +58,7 @@ f32 hermite_cubic_calculate (const Nested_Hermite_Spline *spline, const Slice<f3
     return hermite_cubic_calculate (
         k0.x, hermite_knot_value (k0, t_values), k0.derivative,
         k1.x, hermite_knot_value (k1, t_values), k1.derivative,
-        t
+        inverse_lerp (k0.x, k1.x, t)
     );
 }
 

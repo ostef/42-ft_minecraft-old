@@ -92,9 +92,25 @@ struct Nested_Hermite_Spline
     Static_Array<Knot, Max_Knots> knots;
 };
 
-f32 hermite_cubic_calculate (f32 x0, f32 y0, f32 der0, f32 x1, f32 y1, f32 der1, f32 t);
-f32 hermite_knot_value (const Nested_Hermite_Spline::Knot &knot, const Slice<f32> &t_values);
+inline
+static f32 hermite_cubic_calculate (f32 x0, f32 y0, f32 der0, f32 x1, f32 y1, f32 der1, f32 t)
+{
+    f32 f8 = der0 * (x1 - x0) - (y1 - y0);
+    f32 f9 = -der1 * (x1 - x0) + (y1 - y0);
+
+    return lerp (y0, y1, t) + t * (1 - t) * lerp (f8, f9, t);
+}
+
 f32 hermite_cubic_calculate (const Nested_Hermite_Spline *spline, const Slice<f32> &t_values);
+
+inline
+static f32 hermite_knot_value (const Nested_Hermite_Spline::Knot &knot, const Slice<f32> &t_values)
+{
+    if (knot.is_nested_spline)
+        return hermite_cubic_calculate (knot.spline, t_values);
+
+    return knot.y;
+}
 
 namespace ImGuiExt
 {
