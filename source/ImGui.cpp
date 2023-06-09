@@ -20,24 +20,21 @@ namespace ImGuiExt
     }
 
     void AddHermiteCubic (ImDrawList *draw_list,
-        const ImVec2 &offset, const ImVec2 &scale,
         float x0, float y0, float der0, float x1, float y1, float der1,
         ImU32 color, float thickness, int num_segments)
     {
         if ((color & IM_COL32_A_MASK) == 0)
             return;
 
-        ImVec2 p0;
-        p0.x = offset.x + x0 * scale.x;
-        p0.y = offset.y + y0 * scale.y;
+        ImVec2 p0 = {x0, y0};
 
         draw_list->PathLineTo (p0);
         float t_step = 1.0f / (float)num_segments;
         for (int i_step = 1; i_step <= num_segments; i_step += 1)
         {
             ImVec2 p;
-            p.x = offset.x + ImLerp (x0, x1, t_step * i_step) * scale.x;
-            p.y = offset.y + HermiteCubicCalculate (x0, y0, der0, x1, y1, der1, t_step * i_step) * scale.y;
+            p.x = ImLerp (x0, x1, t_step * i_step);
+            p.y = HermiteCubicCalculate (x0, y0, der0, x1, y1, der1, t_step * i_step);
             draw_list->_Path.push_back (p);
         }
         draw_list->PathStroke (color, 0, thickness);
@@ -70,299 +67,443 @@ namespace ImGuiExt
         }
     }
 
-    static const float BezierSplineEditor_GrabRadius = 8;
-
-    bool BezierSplinePoint (ImGuiID id, const ImRect &bounds, ImVec2 *point)
+    bool BeginPanZoomView (const char *str_id, const ImVec2 &size, ImVec2 *offset, float *scale,
+        bool border, PanZoomViewFlags flags, ImGuiWindowFlags window_flags, const PanZoomViewParams &extra)
     {
-        ImVec2 point_center = bounds.Min + ImVec2{point->x, 1 - point->y} * (bounds.Max - bounds.Min);
-
-        ImRect box = ImRect{
-            point_center - ImVec2{BezierSplineEditor_GrabRadius, BezierSplineEditor_GrabRadius},
-            point_center + ImVec2{BezierSplineEditor_GrabRadius, BezierSplineEditor_GrabRadius}
-        };
-        bool hovered = false;
-        bool held = false;
-
-        ImGui::ItemAdd (box, id);
-        ImGui::ButtonBehavior (box, id, &hovered, &held, ImGuiButtonFlags_NoNavFocus);
-
-        if (hovered || held)
-            ImGui::SetTooltip ("(%4.3f %4.3f)", point->x, point->y);
-
-        if (held)
-        {
-            ImGui::SetHoveredID (id);
-
-            point_center = ImGui::GetIO ().MousePos;
-
-            point->x = (point_center.x - bounds.Min.x) / (bounds.Max.x - bounds.Min.x);
-            point->y = 1 - (point_center.y - bounds.Min.y) / (bounds.Max.y - bounds.Min.y);
-            if (ImGui::IsKeyDown (ImGuiKey_LeftCtrl))
-            {
-                point->x = roundf (point->x * 10) / 10;
-                point->y = roundf (point->y * 10) / 10;
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    void BezierSplineInsertPoint (const ImVec2 &p, int *control_point_count, ImVec2 *control_points)
-    {
-        int insert_index = -1;
-        int curve_count = (*control_point_count - 1) / 3;
-        for (int i = curve_count - 1; i >= 0; i -= 1)
-        {
-            if (p.x >= control_points[i * 3].x)
-            {
-                insert_index = i + 1;
-                break;
-            }
-        }
-
-        insert_index = ImClamp (insert_index, 1, curve_count);
-        insert_index *= 3;
-
-        for (int i = *control_point_count + 2; i >= insert_index + 2; i -= 1)
-            control_points[i] = control_points[i - 3];
-        *control_point_count += 3;
-
-        control_points[insert_index - 1] = p - ImVec2{0.1, 0};
-        control_points[insert_index] = p;
-        control_points[insert_index + 1] = p + ImVec2{0.1, 0};
-    }
-
-    void BezierSplineRemovePoint (int index, int *control_point_count, ImVec2 *control_points)
-    {
-        for (int i = index - 1; i < *control_point_count - 3; i += 1)
-            control_points[i] = control_points[i + 3];
-        *control_point_count -= 3;
-    }
-
-    bool BezierSplineEditor (const char *str_id, const ImVec2 &size, int max_control_points, int *control_point_count, ImVec2 *control_points)
-    {
-        assert (max_control_points >= 4);
-
-        auto style = ImGui::GetStyle ();
-        bool modified = false;
-
-        // Ensure there is at least two points
-        if (*control_point_count < 4)
-        {
-            control_points[0] = {0, 0};
-            control_points[1] = {0, 0.7};
-            control_points[2] = {0.3, 1};
-            control_points[3] = {1, 1};
-            *control_point_count = 4;
-
-            modified = true;
-        }
-
-        ImGui::PushID (str_id);
-
-        if (ImGui::Button ("Mirror X"))
-        {
-            for (int i = 0; i < *control_point_count / 2; i += 1)
-            {
-                auto p = control_points[i];
-                p.x = 1 - p.x;
-
-                control_points[i] = control_points[*control_point_count - i - 1];
-                control_points[i].x = 1 - control_points[i].x;
-                control_points[*control_point_count - i - 1] = p;
-            }
-
-            if (*control_point_count % 2 != 0)
-                control_points[*control_point_count / 2].x = 1 - control_points[*control_point_count / 2].x;
-
-            modified = true;
-        }
-
-        ImGui::SameLine ();
-
-        if (ImGui::Button ("Mirror Y"))
-        {
-            for (int i = 0; i < *control_point_count; i += 1)
-            {
-                control_points[i].y = 1 - control_points[i].y;
-            }
-            modified = true;
-        }
-
-        if (!ImGui::BeginChild (str_id, size + style.WindowPadding * 2, true))
-        {
-            ImGui::EndChild ();
-            ImGui::PopID ();
+        if (!ImGui::BeginChild (str_id, size, border, window_flags))
             return false;
+
+        bool dragging = false;
+        ImGuiMouseButton dragging_with_button = 0;
+        if (ImGui::IsWindowHovered ())
+        {
+            if (flags & PanZoomViewFlags_PanOnLeftMouse)
+            {
+                dragging |= ImGui::IsMouseDragging (ImGuiMouseButton_Left);
+                dragging_with_button = ImGuiMouseButton_Left;
+            }
+
+            if (!dragging && (flags & PanZoomViewFlags_PanOnMiddleMouse))
+            {
+                dragging |= ImGui::IsMouseDragging (ImGuiMouseButton_Middle);
+                dragging_with_button = ImGuiMouseButton_Middle;
+            }
+
+            if (!dragging && (flags & PanZoomViewFlags_PanOnRightMouse))
+            {
+                dragging |= ImGui::IsMouseDragging (ImGuiMouseButton_Right);
+                dragging_with_button = ImGuiMouseButton_Right;
+            }
+
+            if (flags & PanZoomViewFlags_PanOnSpace)
+                dragging &= ImGui::IsKeyDown (ImGuiKey_Space);
         }
+
+        ImRect bounds;
+        bounds.Min = ImGui::GetWindowPos () + ImGui::GetStyle ().WindowPadding;
+        bounds.Max = bounds.Min + size;
+
+        ImVec2 mouse_pos = ImGui::GetMousePos () - bounds.Min;
+
+        if (dragging)
+        {
+            ImVec2 delta = ImGui::GetMouseDragDelta (dragging_with_button);
+            ImGui::ResetMouseDragDelta (dragging_with_button);
+
+            offset->x -= delta.x / *scale;
+            offset->y -= delta.y / *scale;
+
+            *offset = ImClamp (*offset,
+                {extra.XOffsetRange.x, extra.YOffsetRange.x},
+                {extra.XOffsetRange.y, extra.YOffsetRange.y}
+            );
+        }
+
+        ImVec2 mouse_before_zoom = mouse_pos;
+        WindowToPanZoom (*offset, *scale, &mouse_before_zoom, NULL);
+
+        if (ImGui::IsWindowHovered ())
+        {
+            auto wheel = ImGui::GetIO ().MouseWheel;
+            if (wheel > 0)
+                *scale *= 1.1f;
+            if (wheel < 0)
+                *scale *= 0.9f;
+        }
+
+        *scale = ImClamp (*scale, extra.ScaleRange.x, extra.ScaleRange.y);
+
+        ImVec2 mouse_after_zoom = mouse_pos;
+        WindowToPanZoom (*offset, *scale, &mouse_after_zoom, NULL);
+
+        *offset -= (mouse_after_zoom - mouse_before_zoom);
+
+        *offset = ImClamp (*offset,
+            {extra.XOffsetRange.x, extra.YOffsetRange.x},
+            {extra.XOffsetRange.y, extra.YOffsetRange.y}
+        );
 
         auto draw_list = ImGui::GetWindowDrawList ();
-        auto window = ImGui::GetCurrentWindow ();
-        if (window->SkipItems)
+
+        // Draw grid
+        if (!(flags & PanZoomViewFlags_NoGrid))
+        {
+            static const int GridSize = 10;
+
+            ImVec2 grid_cell_size = ImVec2{GridSize, GridSize};
+            PanZoomToWindow (*offset, *scale, NULL, &grid_cell_size);
+
+            if (grid_cell_size.x > 0 && grid_cell_size.y > 0)
+            {
+                for (float i = grid_cell_size.x; i <= size.x - grid_cell_size.x; i += grid_cell_size.x)
+                {
+                    ImVec2 pos = {i, 0.0f};
+                    PanZoomToWindow (*offset, *scale, &pos, NULL);
+                    pos = ImFloor (pos);
+
+                    draw_list->AddLine (
+                        ImVec2{bounds.Min.x + pos.x, bounds.Min.y},
+                        ImVec2{bounds.Min.x + pos.x, bounds.Max.y},
+                        ImGui::GetColorU32 (ImGuiCol_TextDisabled)
+                    );
+                }
+
+                for (float i = grid_cell_size.y; i <= size.y - grid_cell_size.y; i += grid_cell_size.y)
+                {
+                    ImVec2 pos = {0.0f, i};
+                    PanZoomToWindow (*offset, *scale, &pos, NULL);
+                    pos = ImFloor (pos);
+
+                    draw_list->AddLine (
+                        ImVec2{bounds.Min.x, bounds.Min.y + pos.y},
+                        ImVec2{bounds.Max.x, bounds.Min.y + pos.y},
+                        ImGui::GetColorU32 (ImGuiCol_TextDisabled)
+                    );
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void EndPanZoomView ()
+    {
+        ImGui::EndChild ();
+    }
+
+    void PanZoomToWindow (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size)
+    {
+        if (inout_pos)
+        {
+            inout_pos->x = (inout_pos->x - offset.x) * scale;
+            inout_pos->y = (inout_pos->y - offset.y) * scale;
+        }
+
+        if (inout_size)
+        {
+            inout_size->x = inout_size->x * scale;
+            inout_size->y = inout_size->y * scale;
+        }
+    }
+
+    void WindowToPanZoom (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size)
+    {
+        if (inout_pos)
+        {
+            inout_pos->x = inout_pos->x / scale + offset.x;
+            inout_pos->y = inout_pos->y / scale + offset.y;
+        }
+
+        if (inout_size)
+        {
+            inout_size->x = inout_size->x / scale;
+            inout_size->y = inout_size->y / scale;
+        }
+    }
+
+    bool BeginHermiteSpline (const char *str_id, ImVec2 *offset, float *scale, const ImVec2 &size,
+        bool border, HermiteSplineFlags flags, const HermiteSplineParams &extra)
+    {
+        auto storage = ImGui::GetStateStorage ();
+
+        const char *wrapper_id;
+        ImFormatStringToTempBuffer (&wrapper_id, NULL, "%s##Wrapper", str_id);
+        ImGui::PushID (wrapper_id);
+
+        bool opened;
+        if (flags & HermiteSplineFlags_NoPanNoZoom)
+            opened = ImGui::BeginChild (str_id, size, true);
+        else
+            opened = BeginPanZoomView (str_id, size, offset, scale,
+                border, PanZoomViewFlags_NoGrid | PanZoomViewFlags_PanOnMiddleMouse, 0, extra.ViewParams);
+
+        if (!opened)
             return false;
 
         ImRect bounds;
-        bounds.Min = ImGui::GetCursorScreenPos ();
+        bounds.Min = ImGui::GetWindowPos () + ImGui::GetStyle ().WindowPadding;
         bounds.Max = bounds.Min + size;
 
-        // Draw Grid
-        static const int GridSize = 10;
-        int grid_cell_width  = (int)(size.x / GridSize);
-        int grid_cell_height = (int)(size.y / GridSize);
-        if (grid_cell_width > 0 && grid_cell_height > 0)
+        auto draw_list = ImGui::GetWindowDrawList ();
+
+        // Draw grid
+        if (!(flags & HermiteSplineFlags_NoGrid))
         {
-            for (int i = grid_cell_width; i <= size.x - grid_cell_width; i += grid_cell_width)
-                draw_list->AddLine (
-                    ImVec2{bounds.Min.x + i, bounds.Min.y},
-                    ImVec2{bounds.Min.x + i, bounds.Max.y},
-                    ImGui::GetColorU32 (ImGuiCol_TextDisabled)
-                );
-            for (int i = grid_cell_height; i <= size.y - grid_cell_height; i += grid_cell_height)
-                draw_list->AddLine (
-                    ImVec2{bounds.Min.x, bounds.Min.y + i},
-                    ImVec2{bounds.Max.x, bounds.Min.y + i},
-                    ImGui::GetColorU32 (ImGuiCol_TextDisabled)
-                );
-        }
+            ImVec2 min = ImVec2{
+                extra.XRange.x,
+                extra.YRange.x
+            };
+            PanZoomToWindow (*offset, *scale, &min, NULL);
 
-        int curve_count = ImGuiExt_BezierSpline_CurveCountFromPointCount (*control_point_count);
+            ImVec2 max = ImVec2{
+                extra.XRange.y,
+                extra.YRange.y
+            };
+            PanZoomToWindow (*offset, *scale, &max, NULL);
 
-        // Move points
-        int point_hovered = -1;
-        int point_modified = -1;
-        for (int i = 0; i < *control_point_count; i += 1)
-        {
-            bool first = i == 0;
-            bool last = i == *control_point_count - 1;
+            ImVec2 min_by_grid = ImVec2{
+                ImFloor (extra.XRange.x / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize,
+                ImFloor (extra.YRange.x / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize
+            };
+            PanZoomToWindow (*offset, *scale, &min_by_grid, NULL);
 
-            ImVec2 relative_prev_tang, relative_next_tang;
-            if (i % 3 == 0)
+            ImVec2 max_by_grid = ImVec2{
+                ImFloor (extra.XRange.y / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize,
+                ImFloor (extra.YRange.y / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize
+            };
+            PanZoomToWindow (*offset, *scale, &max_by_grid, NULL);
+
+            float cell_size = extra.ViewParams.GridCellSize * *scale;
+
+            if (cell_size > 0)
             {
-                if (!first)
-                    relative_prev_tang = control_points[i - 1] - control_points[i];
-                if (!last)
-                    relative_next_tang = control_points[i + 1] - control_points[i];
-            }
-
-            if (BezierSplinePoint (window->GetID (i), bounds, &control_points[i]))
-            {
-                point_modified = i;
-                modified = true;
-            }
-
-            if (i % 3 == 0 && !first && !last && ImGui::IsItemClicked (ImGuiMouseButton_Middle))
-            {
-                BezierSplineRemovePoint (i, control_point_count, control_points);
-                modified = true;
-
-                break;
-            }
-
-            if (ImGui::IsItemHovered ())
-                point_hovered = i;
-
-            if (point_modified == i)
-            {
-                if (i % 3 == 0)
+                for (float i = min_by_grid.x; i <= max_by_grid.x + 0.001f; i += cell_size)
                 {
-                    if (first)
-                        control_points[i].x = 0;
-                    else
-                        control_points[i].x = ImMax (control_points[i].x, control_points[i - 3].x);
-
-                    if (last)
-                        control_points[i].x = 1;
-                    else
-                        control_points[i].x = ImMin (control_points[i].x, control_points[i + 3].x);
-
-                    control_points[i].y = ImSaturate (control_points[i].y);
-
-                    if (!first)
-                        control_points[i - 1] = control_points[i] + relative_prev_tang;
-                    if (!last)
-                        control_points[i + 1] = control_points[i] + relative_next_tang;
-
-                }
-                else if (i % 3 == 1)
-                {
-                    if (!first && ImGui::IsKeyDown (ImGuiKey_LeftShift))
-                    {
-                        ImVec2 rel_tang = control_points[i] - control_points[i - 1];
-                        control_points[i - 2] = control_points[i - 1] - rel_tang;
-                    }
-                }
-                else if (i % 3 == 2)
-                {
-                    if (!last && ImGui::IsKeyDown (ImGuiKey_LeftShift))
-                    {
-                        ImVec2 rel_tang = control_points[i] - control_points[i + 1];
-                        control_points[i + 2] = control_points[i + 1] - rel_tang;
-                    }
+                    draw_list->AddLine (
+                        ImVec2{bounds.Min.x + ImFloor (i), bounds.Min.y + ImFloor (min.y)},
+                        ImVec2{bounds.Min.x + ImFloor (i), bounds.Min.y + ImFloor (max.y)},
+                        ImGui::GetColorU32 (ImGuiCol_TextDisabled)
+                    );
                 }
 
-                break;
+                for (float i = min_by_grid.y; i <= max_by_grid.y + 0.001f; i += cell_size)
+                {
+                    draw_list->AddLine (
+                        ImVec2{bounds.Min.x + ImFloor (min.x), bounds.Min.y + ImFloor (i)},
+                        ImVec2{bounds.Min.x + ImFloor (max.x), bounds.Min.y + ImFloor (i)},
+                        ImGui::GetColorU32 (ImGuiCol_TextDisabled)
+                    );
+                }
             }
+
+            ImVec2 origin = {};
+            PanZoomToWindow (*offset, *scale, &origin, NULL);
+
+            draw_list->AddLine (
+                ImVec2{bounds.Min.x + ImFloor (origin.x), bounds.Min.y + ImFloor (min.y)},
+                ImVec2{bounds.Min.x + ImFloor (origin.x), bounds.Min.y + ImFloor (max.y)},
+                ImGui::GetColorU32 (ImGuiCol_TextDisabled),
+                3
+            );
+
+            draw_list->AddLine (
+                ImVec2{bounds.Min.x + ImFloor (min.x), bounds.Min.y + ImFloor (origin.y)},
+                ImVec2{bounds.Min.x + ImFloor (max.x), bounds.Min.y + ImFloor (origin.y)},
+                ImGui::GetColorU32 (ImGuiCol_TextDisabled),
+                3
+            );
+
+            draw_list->AddRect (bounds.Min + min, bounds.Min + max, ImGui::GetColorU32 (ImGuiCol_TextDisabled), 0, 0, 3);
         }
 
-        // Insert new points
-        if (point_hovered == -1 && ImGui::IsWindowHovered () && ImGui::IsMouseDoubleClicked (0))
+        // Draw metrics
+        if (!(flags & HermiteSplineFlags_NoMetricsOnXAxis))
         {
-            if (*control_point_count + 3 <= max_control_points)
+            float ref_width = ImGui::CalcTextSize ("-0.0").x * 1.5f;
+
+            float metrics_incr = extra.ViewParams.GridCellSize;
+            while (metrics_incr * *scale < ref_width)
+                metrics_incr += extra.ViewParams.GridCellSize;
+
+            float min_by_grid = ImFloor (extra.XRange.x / metrics_incr) * metrics_incr;
+            float max_by_grid = ImFloor (extra.XRange.y / metrics_incr) * metrics_incr;
+
+            for (float i = min_by_grid; i <= max_by_grid + 0.001f; i += metrics_incr)
             {
-                ImVec2 p = (ImGui::GetIO ().MousePos - bounds.Min);
-                p.x = ImSaturate (p.x / size.x);
-                p.y = 1 - ImSaturate (p.y / size.y);
+                const char *text = NULL;
+                ImFormatStringToTempBuffer (&text, NULL, "%.1f", i);
 
-                BezierSplineInsertPoint (p, control_point_count, control_points);
-                modified = true;
+                ImVec2 pos = {i, 0.0f};
+                PanZoomToWindow (*offset, *scale, &pos, NULL);
+
+                auto text_size = ImGui::CalcTextSize (text);
+                pos.x += bounds.Min.x - text_size.x * 0.5;
+                pos.y = bounds.Max.y - text_size.y - ImGui::GetStyle ().WindowPadding.y;
+
+                draw_list->AddText (pos, ImGui::GetColorU32 (ImGuiCol_Text), text);
             }
         }
 
-        curve_count = ImGuiExt_BezierSpline_CurveCountFromPointCount (*control_point_count);
-
-        // Draw lines
-        for (int i = 0; i < curve_count; i += 1)
+        if (!(flags & HermiteSplineFlags_NoMetricsOnYAxis))
         {
-            ImVec2 p0 = control_points[i * 3];
-            p0 = bounds.Min + ImVec2{p0.x * size.x, (1 - p0.y) * size.y};
-            ImVec2 t0 = control_points[i * 3 + 1];
-            t0 = bounds.Min + ImVec2{t0.x * size.x, (1 - t0.y) * size.y};
-            ImVec2 t1 = control_points[i * 3 + 2];
-            t1 = bounds.Min + ImVec2{t1.x * size.x, (1 - t1.y) * size.y};
-            ImVec2 p1 = control_points[i * 3 + 3];
-            p1 = bounds.Min + ImVec2{p1.x * size.x, (1 - p1.y) * size.y};
+            float ref_height = ImGui::CalcTextSize ("-0.0").y * 1.5f;
 
-            draw_list->AddLine (p0, t0, ImGui::GetColorU32 (ImGuiCol_Text));
-            draw_list->AddLine (p1, t1, ImGui::GetColorU32 (ImGuiCol_Text));
-            draw_list->AddBezierCubic (p0, t0, t1, p1, ImGui::GetColorU32 (ImGuiCol_Text), 2);
+            float metrics_incr = extra.ViewParams.GridCellSize;
+            while (metrics_incr * *scale < ref_height)
+                metrics_incr += extra.ViewParams.GridCellSize;
+
+            float min_by_grid = ImFloor (extra.YRange.x / metrics_incr) * metrics_incr;
+            float max_by_grid = ImFloor (extra.YRange.y / metrics_incr) * metrics_incr;
+
+            for (float i = min_by_grid; i <= max_by_grid + 0.001f; i += metrics_incr)
+            {
+                const char *text = NULL;
+                ImFormatStringToTempBuffer (&text, NULL, "%.1f", i);
+
+                ImVec2 pos = {0.0f, i};
+                PanZoomToWindow (*offset, *scale, &pos, NULL);
+
+                auto text_size = ImGui::CalcTextSize (text);
+                pos.x = bounds.Min.x;
+                pos.y += bounds.Min.y - text_size.y * 0.5;
+
+                draw_list->AddText (pos, ImGui::GetColorU32 (ImGuiCol_Text), text);
+            }
         }
 
-        // Draw points
-        for (int i = 0; i < *control_point_count; i += 1)
-        {
-            ImVec2 p = bounds.Min
-                + ImVec2{control_points[i].x * size.x, (1 - control_points[i].y) * size.y};
+        return true;
+    }
 
-            ImU32 color;
-            ImU32 border_color;
-            if (point_modified == i)
-                color = ImGui::GetColorU32 (ImGuiCol_ButtonActive);
-            else if (point_hovered == i)
-                color = ImGui::GetColorU32 (ImGuiCol_ButtonHovered);
-            else
-                color = ImGui::GetColorU32 (ImGuiCol_Button);
-
-            draw_list->AddCircleFilled (p, BezierSplineEditor_GrabRadius, color);
-            if (style.FrameBorderSize > 0)
-                draw_list->AddCircle (p, BezierSplineEditor_GrabRadius, ImGui::GetColorU32 (ImGuiCol_Border), 0, style.FrameBorderSize);
-        }
-
+    void EndHermiteSpline ()
+    {
         ImGui::EndChild ();
-
         ImGui::PopID ();
+    }
 
-        return modified;
+    bool HermiteSplinePoint (ImGuiID id, const ImVec2 &offset, float scale, bool selected,
+        HermiteSplinePointValues &point, const HermiteSplinePointValues &next, HermiteSplinePointFlags flags)
+    {
+        static const float GrabRadius = 8;
+
+        auto window_pos = ImGui::GetWindowPos () + ImGui::GetStyle ().WindowPadding;
+
+        auto original_loc = *point.location;
+        auto original_val = *point.value;
+        auto original_der = *point.derivative;
+
+        auto point_center = ImVec2{*point.location, *point.value};
+        PanZoomToWindow (offset, scale, &point_center, NULL);
+
+        auto box = ImRect{
+            window_pos + point_center - ImVec2{GrabRadius, GrabRadius},
+            window_pos + point_center + ImVec2{GrabRadius, GrabRadius}
+        };
+
+        bool hovered, held;
+
+        ImGui::ItemAdd (box, id);
+        selected |= ImGui::ButtonBehavior (box, id, &hovered, &held, ImGuiButtonFlags_NoNavFocus);
+
+        if (hovered || held)
+            ImGui::SetTooltip ("(%4.3f %4.3f %4.3f)", *point.location, *point.value, *point.derivative);
+
+        if (selected)
+        {
+            if (ImGui::IsKeyDown (ImGuiKey_Space))
+            {
+                auto new_point_center = ImGui::GetMousePos () - window_pos;
+                WindowToPanZoom (offset, scale, &new_point_center, NULL);
+
+                if (!(flags & HermiteSplinePointFlags_LockLocation))
+                    *point.location = new_point_center.x;
+                if (!(flags & HermiteSplinePointFlags_LockValue))
+                    *point.value = new_point_center.y;
+
+                ImGui::SetTooltip ("(%4.3f %4.3f %4.3f)", *point.location, *point.value, *point.derivative);
+            }
+            else if (ImGui::IsKeyDown (ImGuiKey_LeftShift))
+            {
+                auto mouse_pos = ImGui::GetMousePos () - window_pos;
+                WindowToPanZoom (offset, scale, &mouse_pos, NULL);
+
+                if (!(flags & HermiteSplinePointFlags_LockDerivative))
+                {
+                    float dx = mouse_pos.x - *point.location;
+                    float dy = mouse_pos.y - *point.value;
+                    *point.derivative = ImClamp (dy / dx, -10.0f, 10.0f);
+                }
+
+                ImGui::SetTooltip ("(%4.3f %4.3f %4.3f)", *point.location, *point.value, *point.derivative);
+            }
+        }
+
+        auto draw_list = ImGui::GetWindowDrawList ();
+
+        if (selected)
+        {
+            static const float TangentLength = 2;
+
+            ImVec2 p0 = ImVec2{original_loc, original_val};
+
+            ImVec2 t0 = ImVec2{
+                -1,
+                -original_der
+            };
+
+            ImVec2 t1 = ImVec2{
+                1,
+                original_der
+            };
+
+            t0 *= TangentLength * 0.5f / ImSqrt (ImLengthSqr (t0));
+            t0 += p0;
+
+            t1 *= TangentLength * 0.5f / ImSqrt (ImLengthSqr (t1));
+            t1 += p0;
+
+            PanZoomToWindow (offset, scale, &p0, NULL);
+            PanZoomToWindow (offset, scale, &t0, NULL);
+            PanZoomToWindow (offset, scale, &t1, NULL);
+
+            p0 += window_pos;
+            t0 += window_pos;
+            t1 += window_pos;
+
+            AddDashedLine (draw_list, p0, t0, 4, 8, ImGui::GetColorU32 (ImGuiCol_Text, 0.7f), 2);
+            AddDashedLine (draw_list, p0, t1, 4, 8, ImGui::GetColorU32 (ImGuiCol_Text, 0.7f), 2);
+        }
+
+        if (next.location && next.value && next.derivative)
+        {
+            auto p0 = ImVec2{original_loc, original_val};
+            auto p1 = ImVec2{*next.location, *next.value};
+
+            PanZoomToWindow (offset, scale, &p0, NULL);
+            PanZoomToWindow (offset, scale, &p1, NULL);
+
+            p0 += window_pos;
+            p1 += window_pos;
+
+            AddHermiteCubic (draw_list,
+                p0.x, p0.y, original_der,
+                p1.x, p1.y, *next.derivative,
+                ImGui::GetColorU32 (ImGuiCol_Text),
+                2
+            );
+        }
+
+        ImU32 color;
+        if (selected)
+            color = ImGui::GetColorU32 (ImGuiCol_ButtonActive);
+        else if (hovered)
+            color = ImGui::GetColorU32 (ImGuiCol_ButtonHovered);
+        else
+            color = ImGui::GetColorU32 (ImGuiCol_Button);
+
+        draw_list->AddCircleFilled (window_pos + point_center, GrabRadius, color);
+        if (ImGui::GetStyle ().FrameBorderSize > 0)
+            draw_list->AddCircle (window_pos + point_center, GrabRadius, ImGui::GetColorU32 (ImGuiCol_Border), 0, ImGui::GetStyle ().FrameBorderSize);
+
+        return held;
     }
 }

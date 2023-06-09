@@ -51,19 +51,99 @@ namespace ImGuiExt
 {
     bool IsItemDoubleClicked (ImGuiMouseButton mouse_button = 0);
 
-    float HermiteCubicCalculate (float x0, float y0, float der0, float x1, float y1, float der1, float t);
+    struct PanZoomViewParams
+    {
+        ImVec2 XOffsetRange;
+        ImVec2 YOffsetRange;
+        ImVec2 ScaleRange;
+        float GridCellSize;
+    };
 
-    void AddHermiteCubic (ImDrawList *draw_list,
-        const ImVec2 &offset, const ImVec2 &scale,
-        float x0, float y0, float der0, float x1, float y1, float der1,
-        ImU32 color, float thickness = 1.0f, int num_segments = 64);
+    static const PanZoomViewParams PanZoomViewParams_Default = PanZoomViewParams{
+        {-1.0f, 1.0f},
+        {-1.0f, 1.0f},
+        {0.01f, 500.0f},
+        0.1f,
+    };
+
+    typedef int PanZoomViewFlags;
+
+    enum
+    {
+        PanZoomViewFlags_None = 0,
+        PanZoomViewFlags_NoGrid = 0x01,
+        PanZoomViewFlags_PanOnSpace = 0x02,
+        PanZoomViewFlags_PanOnLeftMouse = 0x04,
+        PanZoomViewFlags_PanOnMiddleMouse = 0x08,
+        PanZoomViewFlags_PanOnRightMouse = 0x10,
+
+        PanZoomViewFlags_Default = PanZoomViewFlags_PanOnMiddleMouse,
+    };
+
+    bool BeginPanZoomView (const char *str_id, const ImVec2 &size, ImVec2 *offset, float *scale,
+        bool border = false, PanZoomViewFlags flags = PanZoomViewFlags_Default, ImGuiWindowFlags window_flags = 0,
+        const PanZoomViewParams &extra = PanZoomViewParams_Default);
+
+    void EndPanZoomView ();
 
     void AddDottedLine (ImDrawList *draw_list, const ImVec2 &a, const ImVec2 &b, float spacing, ImU32 color, float thickness = 1.0f);
     void AddDashedLine (ImDrawList *draw_list, const ImVec2 &a, const ImVec2 &b, float line_len, float spacing, ImU32 color, float thickness = 1.0f);
 
-    #define ImGuiExt_BezierSpline_PointCountFromCurveCount(n) (3 * (n) + 1)
-    #define ImGuiExt_BezierSpline_CurveCountFromPointCount(n) (((n) - 1) / 3)
+    float HermiteCubicCalculate (float x0, float y0, float der0, float x1, float y1, float der1, float t);
 
-    bool BezierSplineEditor (const char *str_id, const ImVec2 &size,
-        int max_control_points, int *control_point_count, ImVec2 *control_points);
+    void AddHermiteCubic (ImDrawList *draw_list,
+        float x0, float y0, float der0, float x1, float y1, float der1,
+        ImU32 color, float thickness = 1.0f, int num_segments = 64);
+
+    void PanZoomToWindow (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size);
+    void WindowToPanZoom (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size);
+
+    struct HermiteSplineParams
+    {
+        PanZoomViewParams ViewParams;
+        ImVec2 XRange;
+        ImVec2 YRange;
+    };
+
+    static const HermiteSplineParams HermiteSplineParams_Default = HermiteSplineParams{
+        PanZoomViewParams_Default,
+        {0.0f, 1.0f},
+        {0.0f, 1.0f},
+    };
+
+    typedef int HermiteSplineFlags;
+
+    enum
+    {
+        HermiteSplineFlags_None = 0,
+        HermiteSplineFlags_NoGrid = 0x01,
+        HermiteSplineFlags_NoPanNoZoom = 0x02,
+        HermiteSplineFlags_NoMetricsOnXAxis = 0x04,
+        HermiteSplineFlags_NoMetricsOnYAxis = 0x08,
+    };
+
+    bool BeginHermiteSpline (const char *str_id, ImVec2 *offset, float *scale, const ImVec2 &size = {},
+        bool border = true, HermiteSplineFlags flags = 0, const HermiteSplineParams &extra = HermiteSplineParams_Default);
+
+    void EndHermiteSpline ();
+
+    typedef int HermiteSplinePointFlags;
+
+    enum
+    {
+        HermiteSplinePointFlags_None = 0,
+        HermiteSplinePointFlags_LockLocation = 0x01,
+        HermiteSplinePointFlags_LockValue = 0x02,
+        HermiteSplinePointFlags_LockDerivative = 0x04,
+    };
+
+    struct HermiteSplinePointValues
+    {
+        float *location;
+        float *value;
+        float *derivative;
+    };
+
+    bool HermiteSplinePoint (ImGuiID id, const ImVec2 &offset, float scale, bool selected,
+        HermiteSplinePointValues &point, const HermiteSplinePointValues &next, HermiteSplinePointFlags flags = 0);
 }

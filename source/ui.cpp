@@ -7,7 +7,7 @@ static bool g_show_texture_atlas_window;
 static bool g_show_world_window;
 static bool g_show_terrain_noise_maps_window;
 
-void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrain_Value terrain_value, bool only_noise)
+void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrain_Value terrain_value)
 {
     static const ImVec4 Block_Color_Water = {0.2, 0.3, 0.6, 1.0};
     static const ImVec4 Block_Color_Dirt = {0.4, 0.4, 0.2, 1.0};
@@ -40,7 +40,7 @@ void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrai
             {
                 for_range (cz, 0, Chunk_Size)
                 {
-                    if (terrain_value == Terrain_Value_Count)
+                    if (terrain_value == Terrain_Value_Surface)
                     {
                         ImVec4 color = Block_Color_Water;
                         f32 val = chunk->terrain_values[cx * Chunk_Size + cz].surface_level;
@@ -55,12 +55,7 @@ void generate_terrain_value_texture (GLuint *tex, int x, int z, int size, Terrai
                     }
                     else
                     {
-                        f32 val;
-
-                        if (only_noise)
-                            val = chunk->terrain_values[cx * Chunk_Size + cz].noise_values[terrain_value];
-                        else
-                            val = chunk->terrain_values[cx * Chunk_Size + cz].bezier_values[terrain_value];
+                        f32 val = chunk->terrain_values[cx * Chunk_Size + cz].noise[terrain_value];
 
                         u8 color_comp = cast (u8) (val * 255);
                         texture_buffer[(tex_y + Chunk_Size - cz - 1) * texture_size + tex_x + cx] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
@@ -109,11 +104,11 @@ void generate_noise_texture (GLuint *tex,
         for_range (y, 0, height)
         {
             auto val = perlin_fractal_noise (scale, octaves, offsets, persistance, lacunarity, x + offset_x, y + offset_y);
-            val = inverse_lerp (-max_val, max_val, val);
             if (val < min_non_normalized)
                 min_non_normalized = val;
             if (val > max_non_normalized)
                 max_non_normalized = val;
+            val = inverse_lerp (-max_val, max_val, val);
 
             u8 color_comp = cast (u8) (val * 255);
             texture_buffer[y * height + x] = (0xff << 24) | (color_comp << 16) | (color_comp << 8) | (color_comp << 0);
@@ -298,13 +293,12 @@ void ui_show_terrain_noise_maps (bool generate = false)
 {
     static GLuint continentalness_tex;
     static GLuint erosion_tex;
-    static GLuint peaks_and_valleys_tex;
-    static GLuint height_tex;
+    static GLuint weirdness_tex;
+    static GLuint surface_tex;
 
     static const f32 Scale = 1;
 
     static int size = 8;
-    static bool only_noise = false;
 
     int lines = 3;
     auto child_height = ImGui::GetContentRegionAvail ().y - lines * ImGui::GetFrameHeightWithSpacing ();
@@ -313,7 +307,6 @@ void ui_show_terrain_noise_maps (bool generate = false)
         int column_count = clamp (cast (int) (ImGui::GetContentRegionAvail ().x / (size * Chunk_Size * Scale)), 1, 4);
         ImGui::Columns (column_count, 0, false);
 
-        /*
         ImGui::Text ("Continentalness");
         ImGui::Image (cast (ImTextureID) continentalness_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
@@ -322,57 +315,22 @@ void ui_show_terrain_noise_maps (bool generate = false)
         ImGui::Image (cast (ImTextureID) erosion_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
 
-        ImGui::Text ("Peaks And Valleys");
-        ImGui::Image (cast (ImTextureID) peaks_and_valleys_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
+        ImGui::Text ("Weirdness");
+        ImGui::Image (cast (ImTextureID) weirdness_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
-        */
 
-        ImGui::Text ("Height");
-
-        ImVec2 texture_size;
-        texture_size.x = size * Chunk_Size * Scale;
-        texture_size.y = texture_size.x;
-
-        auto top_left = ImGui::GetCursorScreenPos ();
-
-        ImGui::Image (cast (ImTextureID) height_tex, texture_size);
-
-        if (ImGui::IsItemHovered ())
-        {
-            ImVec2 pos_in_tex = ImGui::GetMousePos () - top_left;
-            pos_in_tex.y -= ImGui::GetScrollX ();
-            pos_in_tex.x = pos_in_tex.x / texture_size.x * size * Chunk_Size;
-            pos_in_tex.y = pos_in_tex.y / texture_size.y * size * Chunk_Size;
-
-            f32 val = 0;
-            int x = cast (int) (g_camera.position.x + pos_in_tex.x - Chunk_Size * size / 2);
-            int z = cast (int) (g_camera.position.z + pos_in_tex.y - Chunk_Size * size / 2);
-            auto chunk_x = x / Chunk_Size;
-            auto chunk_z = z / Chunk_Size;
-            auto chunk = world_get_chunk (&g_world, chunk_x, chunk_z);
-            if (chunk)
-            {
-                int rel_x = x - chunk_x * Chunk_Size;
-                int rel_z = z - chunk_z * Chunk_Size;
-                val = chunk->terrain_values[rel_x * Chunk_Size + rel_z].surface_level;
-            }
-
-            ImGui::SetTooltip ("%d %d\n%f", x, z, val);
-        }
-
+        ImGui::Text ("Surface");
+        ImGui::Image (cast (ImTextureID) surface_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
 
         ImGui::Columns ();
     }
     ImGui::EndChild ();
 
-    if (!continentalness_tex || !erosion_tex || !peaks_and_valleys_tex)
+    if (!continentalness_tex || !erosion_tex || !weirdness_tex || !surface_tex)
         generate = true;
 
     if (ImGui::SliderInt ("Size", &size, 1, 100))
-        generate = true;
-
-    if (ImGui::Checkbox ("Only Noise", &only_noise))
         generate = true;
 
     if (ImGui::Button ("Generate"))
@@ -380,12 +338,25 @@ void ui_show_terrain_noise_maps (bool generate = false)
 
     if (generate)
     {
-        generate_terrain_value_texture (&height_tex,
+        generate_terrain_value_texture (&continentalness_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
-            size, Terrain_Value_Count, only_noise);
+            size, Terrain_Value_Continentalness);
+
+        generate_terrain_value_texture (&erosion_tex,
+            cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
+            size, Terrain_Value_Erosion);
+
+        generate_terrain_value_texture (&weirdness_tex,
+            cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
+            size, Terrain_Value_Weirdness);
+
+        generate_terrain_value_texture (&surface_tex,
+            cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
+            size, Terrain_Value_Surface);
     }
 }
 
+/*
 void ui_show_terrain_params_editor (Terrain_Params *params)
 {
     static const f32 Curve_Editor_Size_Ratio = 0.6;
@@ -470,12 +441,13 @@ void ui_show_terrain_params_editor (Terrain_Params *params)
 
     ImGui::SliderInt ("Water Level", &params->water_level, 0, Chunk_Height);
 }
+*/
 
 void ui_show_advanced_world_settings ()
 {
     static Terrain_Params world_params;
 
-    ui_show_terrain_params_editor (&world_params);
+    //ui_show_terrain_params_editor (&world_params);
 
     ImGui::Separator ();
 
@@ -528,220 +500,13 @@ void ui_show_world_window (bool *opened)
     ImGui::End ();
 }
 
-void ui_show_terrain_creator_window (bool *opened)
-{
-    static Terrain_Params params;
-    static int size = 1000;
-    static GLuint texture;
-    static ImVec4 water_color = {0.2,0.3,0.6,1.0};
-    static ImVec4 dirt_color = {0.6,0.4,0.2,1.0};
-    static f32 global_scale = 1.0;
-    static int seed = 127384;
-    static bool show_c = true;
-    static bool show_e = true;
-    static bool show_pv = true;
-    static bool show_colors = true;
-    static Terrain_Values *values;
-
-    if (ImGui::Begin ("Terrain Creator", opened))
-    {
-        ui_show_terrain_params_editor (&params);
-        ImGui::Separator ();
-        ImGui::ColorEdit3 ("Water Color", &water_color.x);
-        ImGui::ColorEdit3 ("Dirt Color", &dirt_color.x);
-        ImGui::SliderInt ("Size", &size, 128, 10000);
-        ImGui::SliderFloat ("Global Scale", &global_scale, 0.1, 5.0);
-
-        ImGui::Checkbox ("Show Continentalness", &show_c);
-        ImGui::Checkbox ("Show Erosion", &show_e);
-        ImGui::Checkbox ("Show Peaks and Valleys", &show_pv);
-        ImGui::Checkbox ("Show Colors", &show_colors);
-
-        bool generate = false;
-
-        if (!values)
-            generate = true;
-
-        if (ImGui::Button ("Generate New"))
-        {
-            seed = random_get_s32 ();
-            generate = true;
-        }
-
-        ImGui::SameLine ();
-
-        if (ImGui::Button ("Regenerate"))
-        {
-            generate = true;
-        }
-
-        if (ImGui::Button ("Generate World"))
-        {
-            generate = true;
-            world_clear_chunks (&g_world);
-            world_init (&g_world, seed, g_render_distance / 2 + 1, params);
-        }
-
-        if (generate)
-        {
-            mem_free (values, heap_allocator ());
-            values = mem_alloc_uninit (Terrain_Values, size * size, heap_allocator ());
-
-            u32 *pixels = mem_alloc_uninit (u32, size * size, heap_allocator ());
-            defer (mem_free (pixels, heap_allocator ()));
-
-            LC_RNG rng;
-            random_seed (&rng, seed);
-
-            Vec2f coffsets[Perlin_Fractal_Max_Octaves];
-            perlin_generate_offsets (&rng, params.perlin_params[0].octaves, coffsets);
-
-            Vec2f eoffsets[Perlin_Fractal_Max_Octaves];
-            perlin_generate_offsets (&rng, params.perlin_params[1].octaves, eoffsets);
-
-            Vec2f pvoffsets[Perlin_Fractal_Max_Octaves];
-            perlin_generate_offsets (&rng, params.perlin_params[1].octaves, pvoffsets);
-
-            f32 cmax = perlin_fractal_max (params.perlin_params[0].octaves, params.perlin_params[0].persistance);
-            f32 emax = perlin_fractal_max (params.perlin_params[1].octaves, params.perlin_params[1].persistance);
-            f32 pvmax = perlin_fractal_max (params.perlin_params[2].octaves, params.perlin_params[2].persistance);
-            for_range (x, 0, size)
-            {
-                for_range (y, 0, size)
-                {
-                    auto val = &values[x * size + y];
-
-                    f32 perlin_x = cast (f32) x * global_scale;
-                    f32 perlin_y = cast (f32) y * global_scale;
-
-                    f32 normalized_surface_level = 0.0;
-                    f32 div = 0.0;
-                    if (show_c)
-                    {
-                        auto cnoise = cast (f32) perlin_fractal_noise (params.perlin_params[0], coffsets, cast (f32) perlin_x, cast (f32) perlin_y);
-                        cnoise = inverse_lerp (-cmax, cmax, cnoise);
-
-                        val->continentalness_noise = cnoise;
-
-                        val->continentalness_bezier = bezier_cubic_calculate (params.bezier_point_counts[0], params.bezier_points[0], cnoise).y * params.influences[0];
-
-                        normalized_surface_level += val->continentalness_bezier;
-
-                        div += 1;
-                    }
-                    if (show_e)
-                    {
-                        auto enoise = cast (f32) perlin_fractal_noise (params.perlin_params[1], eoffsets, cast (f32) perlin_x, cast (f32) perlin_y);
-                        enoise = inverse_lerp (-emax, emax, enoise);
-
-                        val->erosion_noise = enoise;
-
-                        val->erosion_bezier = bezier_cubic_calculate (params.bezier_point_counts[1], params.bezier_points[1], enoise).y * params.influences[1];
-
-                        normalized_surface_level += val->erosion_bezier;
-
-                        div += 1;
-                    }
-                    if (show_pv)
-                    {
-                        auto pvnoise = cast (f32) perlin_fractal_noise (params.perlin_params[2], pvoffsets, cast (f32) perlin_x, cast (f32) perlin_y);
-                        pvnoise = inverse_lerp (-pvmax, pvmax, pvnoise);
-
-                        val->peaks_and_valleys_noise = -3 * (fabs (fabs (pvnoise) - 0.6666667f) - 0.3333334f);
-
-                        val->peaks_and_valleys_bezier = bezier_cubic_calculate (params.bezier_point_counts[2], params.bezier_points[2], pvnoise).y * params.influences[2];
-
-                        normalized_surface_level += val->peaks_and_valleys_bezier;
-
-                        div += 1;
-                    }
-
-                    normalized_surface_level /= div;
-
-                    auto surface_level = lerp (
-                        cast (f32) params.height_range.x,
-                        cast (f32) params.height_range.y,
-                        normalized_surface_level
-                    );
-
-                    ImVec4 color;
-                    if (show_colors)
-                    {
-                        if (surface_level <= params.water_level)
-                        {
-                            color = water_color;
-                            f32 depth = inverse_lerp (cast (f32) params.height_range.x, cast (f32) params.water_level, surface_level);
-                            depth = max (depth, 0.2f);
-                            color.x *= depth;
-                            color.y *= depth;
-                            color.z *= depth;
-                        }
-                        else
-                        {
-                            color = dirt_color;
-                            f32 depth = inverse_lerp (cast (f32) params.water_level, cast (f32) params.height_range.y, surface_level);
-                            depth = clamp (depth, 0.3f, 1.0f);
-                            color.x *= depth;
-                            color.y *= depth;
-                            color.z *= depth;
-                        }
-                    }
-                    else
-                    {
-                        color = ImVec4{normalized_surface_level, normalized_surface_level, normalized_surface_level, 1.0};
-                    }
-
-                    u32 ucolor = ImGui::ColorConvertFloat4ToU32 (color);
-                    pixels[y * size + x] = ucolor;
-                }
-            }
-
-            if (!texture)
-                glGenTextures (1, &texture);
-            glBindTexture (GL_TEXTURE_2D, texture);
-            glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-            glBindTexture (GL_TEXTURE_2D, 0);
-        }
-    }
-    ImGui::End ();
-
-    if (*opened)
-    {
-        if (ImGui::Begin ("Terrain Texture"))
-        {
-            ImVec2 texture_size;
-            texture_size.x = ImGui::GetContentRegionAvail ().x;
-            texture_size.y = texture_size.x;
-
-            auto top_left = ImGui::GetCursorScreenPos ();
-            ImGui::Image (cast (ImTextureID) texture, texture_size);
-            if (ImGui::IsItemHovered ())
-            {
-                ImVec2 pos_in_tex = ImGui::GetMousePos () - top_left;
-                pos_in_tex.y -= ImGui::GetScrollX ();
-                pos_in_tex.x = pos_in_tex.x / texture_size.x * size;
-                pos_in_tex.y = pos_in_tex.y / texture_size.y * size;
-
-                auto val = values[cast (int) pos_in_tex.x * size + cast (int) pos_in_tex.y];
-
-                ImGui::SetTooltip ("%f %f\nC: %.3f E: %.3f PV: %.3f",
-                    pos_in_tex.x, pos_in_tex.y,
-                    val.bezier_values[0], val.bezier_values[1], val.bezier_values[2]);
-            }
-        }
-        ImGui::End ();
-    }
-}
-
 void ui_show_cubiomes_viewer (bool *opened)
 {
     static GLuint texture;
     static cubiome::Generator gen;
     static int size = 4096;
     static int seed = 218936743;
-    static int noise_map_type = 0;
+    static int noise_map_type = cubiome::NP_WEIRDNESS;
 
     if (ImGui::Begin ("Cubiomes Viewer", opened))
     {
@@ -783,6 +548,11 @@ void ui_show_cubiomes_viewer (bool *opened)
                 for (int i = 0; i < size; i += 1)
                 {
                     float y = cubiome::sampleClimatePara (&gen.bn, null, cast (f64) i, cast (f64) j);
+                    // s64 np[6];
+                    // cubiome::sampleBiomeNoise (&gen.bn, np, i, 0, j, null, 0);
+                    // float y = np[cubiome::NP_WEIRDNESS
+                    y = -3.0F * ( fabsf( fabsf(y) - 0.6666667F ) - 0.33333334F );
+                    y = inverse_lerp (-1.0f, 1.0f, y);
 
                     pixels[j * size + i] = ImGui::ColorConvertFloat4ToU32 (ImVec4{y, y, y, 1});
                 }
@@ -884,8 +654,8 @@ void ui_show_windows ()
             g_show_world_window = true;
         if (ImGui::MenuItem ("Terrain Noise Maps"))
             g_show_terrain_noise_maps_window = true;
-        if (ImGui::MenuItem ("Terrain Creator"))
-            show_terrain_creator = true;
+        // if (ImGui::MenuItem ("Terrain Creator"))
+        //     show_terrain_creator = true;
         if (ImGui::MenuItem ("Cubiomes Viewer"))
             show_cubiomes_viewer = true;
 
@@ -916,47 +686,71 @@ void ui_show_windows ()
         ImGui::End ();
     }
 
-    if (show_terrain_creator)
-        ui_show_terrain_creator_window (&show_terrain_creator);
+    // if (show_terrain_creator)
+    //     ui_show_terrain_creator_window (&show_terrain_creator);
 
     if (show_cubiomes_viewer)
         ui_show_cubiomes_viewer (&show_cubiomes_viewer);
 
-    static bool show_nested_spline_editor = false;
-    if (show_nested_spline_editor)
+    if (ImGui::Begin ("Pan Zoom Test"))
     {
-        if (ImGui::Begin ("Nested Spline Editor", &show_nested_spline_editor))
+        struct Point
         {
-            static Nested_Hermite_Spline root_spline;
-            static ImGuiExt::NestedHermiteSplineEditorData data;
-            if (!data.root_spline)
+            float location;
+            float derivative;
+            float value;
+        };
+
+        static ImVec2 offset;
+        static float scale = 100;
+        static ImGuiExt::HermiteSplineParams params = ImGuiExt::HermiteSplineParams_Default;
+        params.ViewParams.XOffsetRange = {-2.0f, 2.0f};
+        params.ViewParams.YOffsetRange = {-2.0f, 2.0f};
+        params.XRange = {-1.0f, 1.0f};
+        params.YRange = {-1.0f, 1.0f};
+
+        static Point points[100];
+        static int point_count;
+        static int selected_point = -1;
+
+        if (ImGuiExt::BeginHermiteSpline ("Hermite Spline", &offset, &scale,
+            {500, 400}, true, 0, params))
+        {
+            for_range (i, 0, point_count)
             {
-                data.root_spline = &root_spline;
+                ImGuiExt::HermiteSplinePointValues curr = {&points[i].location, &points[i].value, &points[i].derivative};
+                ImGuiExt::HermiteSplinePointValues next;
+                if (i == point_count - 1)
+                    next = {};
+                else
+                    next = {&points[i + 1].location, &points[i + 1].value, &points[i + 1].derivative};
 
-                // Generate cubiome splines
-                cubiome::Generator gen;
-                cubiome::setupGenerator (&gen, cubiome::MC_1_20, 0);
-                convert_cubiome_spline (gen.bn.sp, &root_spline);
+                if (ImGuiExt::HermiteSplinePoint (ImGui::GetID (&points[i]), offset, scale,
+                    selected_point == i, curr, next))
+                {
+                    selected_point = i;
+                }
 
-                Vec2f x_range = {F32_MAX, -F32_MAX};
-                Vec2f y_range = {F32_MAX, -F32_MAX};
-                calculate_spline_range (&root_spline, &x_range, &y_range);
-                fix_spline_range (&root_spline, x_range.x, x_range.y, y_range.x, y_range.y);
-            }
-
-            static f32 t_values[4];
-
-            ImVec2 size = {ImGui::GetContentRegionAvail ().x - 20, (ImGui::GetContentRegionAvail ().x - 20) * 300/500};
-
-            ImGuiExt::NestedHermiteSplineEditor ("AA", size, &data, slice_make (array_size (t_values), t_values),
-                "Continentalness\0Erosion\0Ridges\0Weirdness\0");
-
-            for_range (i, 0, array_size (t_values))
-            {
-                static const char *Names[] = {"Continentalness","Erosion","Ridges","Weirdness"};
-                ImGui::SliderFloat (Names[i], &t_values[i], 0.0, 1.0);
+                points[i].location = clamp (points[i].location, params.XRange.x, params.XRange.y);
+                points[i].value    = clamp (points[i].value, params.YRange.x, params.YRange.y);
             }
         }
-        ImGui::End ();
+
+        if (!ImGui::IsAnyItemHovered () && ImGui::IsWindowHovered () && ImGui::IsMouseDoubleClicked (ImGuiMouseButton_Left))
+        {
+            auto *pt = &points[point_count];
+            point_count += 1;
+
+            auto mouse_pos = ImGui::GetMousePos ();
+            mouse_pos -= ImGui::GetWindowPos ();
+
+            ImGuiExt::WindowToPanZoom (offset, scale, &mouse_pos, null);
+            pt->location = mouse_pos.x;
+            pt->value = mouse_pos.y;
+            pt->derivative = 0;
+        }
+
+        ImGuiExt::EndHermiteSpline ();
     }
+    ImGui::End ();
 }
