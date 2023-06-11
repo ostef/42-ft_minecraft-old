@@ -200,12 +200,12 @@ namespace ImGuiExt
     {
         if (inout_pos)
         {
-            inout_pos->x = (inout_pos->x - offset.x) * scale;
+            inout_pos->x = (inout_pos->x - offset.x) * scale + ImGui::GetWindowWidth () * 0.5f;
 
             if (y_down)
-                inout_pos->y = (inout_pos->y - offset.y) * scale;
+                inout_pos->y = (inout_pos->y - offset.y) * scale + ImGui::GetWindowHeight () * 0.5f;
             else
-                inout_pos->y = 1 - (inout_pos->y + offset.y) * scale;
+                inout_pos->y = 1 - (inout_pos->y + offset.y) * scale + ImGui::GetWindowHeight () * 0.5f;
         }
 
         if (inout_size)
@@ -219,11 +219,11 @@ namespace ImGuiExt
     {
         if (inout_pos)
         {
-            inout_pos->x = inout_pos->x / scale + offset.x;
+            inout_pos->x = (inout_pos->x - ImGui::GetWindowWidth () * 0.5f) / scale + offset.x;
             if (y_down)
-                inout_pos->y = inout_pos->y / scale + offset.y;
+                inout_pos->y = (inout_pos->y - ImGui::GetWindowHeight () * 0.5f) / scale + offset.y;
             else
-                inout_pos->y = -(inout_pos->y - 1) / scale - offset.y;
+                inout_pos->y = -(inout_pos->y - ImGui::GetWindowHeight () * 0.5f - 1) / scale - offset.y;
         }
 
         if (inout_size)

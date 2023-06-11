@@ -694,7 +694,7 @@ void ui_show_windows ()
 
     if (ImGui::Begin ("Pan Zoom Test"))
     {
-        static ImVec2 offset = {-1.0f, -1.0f};
+        static ImVec2 offset;
         static float scale = 100;
         static ImGuiExt::HermiteSplineParams params = ImGuiExt::HermiteSplineParams_Default;
         params.ViewParams.XOffsetRange = {-2.0f, 2.0f};
@@ -716,7 +716,7 @@ void ui_show_windows ()
 
         ImGui::Columns (2);
 
-        if (ImGuiExt::BeginHermiteSpline ("Hermite Spline", &offset, &scale, {500, 400}, true, 0, params))
+        if (ImGuiExt::BeginHermiteSpline ("Hermite Spline", &offset, &scale, {ImGui::GetContentRegionAvail ().x, 400}, true, 0, params))
         {
             if (selected_spline >= 0)
             {
