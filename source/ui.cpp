@@ -700,7 +700,7 @@ void ui_show_windows ()
         params.ViewParams.XOffsetRange = {-2.0f, 2.0f};
         params.ViewParams.YOffsetRange = {-2.0f, 2.0f};
         params.XRange = {-1.0f, 1.0f};
-        params.YRange = {-2.0f, 1.0f};
+        params.YRange = {-1.0f, 1.0f};
 
         static const int Max_Splines = 10;
 
