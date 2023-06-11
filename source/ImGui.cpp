@@ -73,6 +73,10 @@ namespace ImGuiExt
         if (!ImGui::BeginChild (str_id, size, border, window_flags))
             return false;
 
+        // @Hack: we want to capture the mouse wheel when hovering the child window
+        // There is SetKeyOwner, but it only works for items, not windows
+        ImGui::GetCurrentWindow ()->ScrollMax.y = 1.0f;
+
         bool y_down = (flags & PanZoomViewFlags_DownwardsYAxis) != 0;
         bool dragging = false;
         ImGuiMouseButton dragging_with_button = 0;
