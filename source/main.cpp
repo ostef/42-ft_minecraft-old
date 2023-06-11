@@ -62,44 +62,6 @@ f32 hermite_cubic_calculate (const Nested_Hermite_Spline *spline, const Slice<f3
     );
 }
 
-Vec2f bezier_cubic_calculate (int count, Vec2f *points, f32 t)
-{
-    Vec2f p0, p1;
-
-    if (t < points[0].x)
-    {
-        p0 = points[0];
-        p1 = points[3];
-        t = inverse_lerp (p0.x, p1.x, t);
-
-        return bezier_cubic_calculate (p0, points[1], points[2], p1, t);
-    }
-
-    int curve_count = ImGuiExt_BezierSpline_CurveCountFromPointCount (count);
-    for_range (i, 0, curve_count)
-    {
-        if (t >= points[i * 3].x && t <= points[i * 3 + 3].x)
-        {
-            p0 = points[i * 3];
-            p1 = points[i * 3 + 3];
-
-            return bezier_cubic_calculate (
-                p0,
-                points[i * 3 + 1],
-                points[i * 3 + 2],
-                p1,
-                inverse_lerp (p0.x, p1.x, t)
-            );
-        }
-    }
-
-    p0 = points[count - 4];
-    p1 = points[count - 1];
-    t = inverse_lerp (p0.x, p1.x, t);
-
-    return bezier_cubic_calculate (p0, points[count - 3], points[count - 2], p1, t);
-}
-
 void glfw_error_callback (int error, const char *description)
 {
     println ("GLFW Error (%d): %s", error, description);
@@ -253,7 +215,7 @@ int main (int argc, const char **args)
     Vec3f camera_position {};
     Vec3f camera_direction {};
 
-    g_camera.position.y = cast (f32) (Surface_Level + Surface_Height_Threshold + 5);
+    g_camera.position.y = cast (f32) Default_Height_Range.y;
     g_camera.fov = 60;
     g_camera.rotation = {};
     g_camera.transform = {};
@@ -289,8 +251,8 @@ int main (int argc, const char **args)
 
         if (g_generate_new_chunks)
         {
-            s64 camera_chunk_x = cast (s64) g_camera.position.x / Chunk_Size;
-            s64 camera_chunk_z = cast (s64) g_camera.position.z / Chunk_Size;
+            s64 camera_chunk_x = chunk_position_from_block_position (cast (s64) g_camera.position.x, cast (s64) g_camera.position.z).x;
+            s64 camera_chunk_z = chunk_position_from_block_position (cast (s64) g_camera.position.x, cast (s64) g_camera.position.z).y;
 
             for_range (x, camera_chunk_x - g_render_distance, camera_chunk_x + g_render_distance)
             {
@@ -348,6 +310,16 @@ int main (int argc, const char **args)
             if (ImGui::Begin ("##overlay", null, host_window_flags))
             {
                 ImGui::Text ("%.0f %.0f %.0f", g_camera.position.x, g_camera.position.y, g_camera.position.z);
+
+                s64 x = cast (s64) g_camera.position.x;
+                s64 z = cast (s64) g_camera.position.z;
+                auto chunk = world_get_chunk_at_block_position (&g_world, x, z);
+                if (chunk)
+                {
+                    auto pos = chunk_absolute_to_relative_coordinates (chunk, x, z);
+                    auto values = chunk_get_terrain_values (chunk, pos.x, pos.y);
+                    ImGui::Text ("C: %.3f E: %.3f PV: %.3f S: %.3f", values.noise[0], values.noise[1], values.noise[2], values.surface_level);
+                }
             }
             ImGui::End ();
         }
