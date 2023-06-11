@@ -694,63 +694,101 @@ void ui_show_windows ()
 
     if (ImGui::Begin ("Pan Zoom Test"))
     {
-        struct Point
-        {
-            float location;
-            float derivative;
-            float value;
-        };
-
-        static ImVec2 offset;
+        static ImVec2 offset = {-1.0f, -1.0f};
         static float scale = 100;
         static ImGuiExt::HermiteSplineParams params = ImGuiExt::HermiteSplineParams_Default;
         params.ViewParams.XOffsetRange = {-2.0f, 2.0f};
         params.ViewParams.YOffsetRange = {-2.0f, 2.0f};
         params.XRange = {-1.0f, 1.0f};
-        params.YRange = {-1.0f, 1.0f};
+        params.YRange = {-2.0f, 1.0f};
 
-        static Point points[100];
-        static int point_count;
+        static const int Max_Splines = 10;
+
+        static Static_Array<Nested_Hermite_Spline, Max_Splines> splines;
+        static int selected_spline = -1;
         static int selected_point = -1;
 
-        if (ImGuiExt::BeginHermiteSpline ("Hermite Spline", &offset, &scale,
-            {500, 400}, true, 0, params))
+        if (splines.count == 0)
         {
-            for_range (i, 0, point_count)
+            array_push (&splines);
+            selected_spline = 0;
+        }
+
+        ImGui::Columns (2);
+
+        if (ImGuiExt::BeginHermiteSpline ("Hermite Spline", &offset, &scale, {500, 400}, true, 0, params))
+        {
+            if (selected_spline >= 0)
             {
-                ImGuiExt::HermiteSplinePointValues curr = {&points[i].location, &points[i].value, &points[i].derivative};
-                ImGuiExt::HermiteSplinePointValues next;
-                if (i == point_count - 1)
-                    next = {};
-                else
-                    next = {&points[i + 1].location, &points[i + 1].value, &points[i + 1].derivative};
-
-                if (ImGuiExt::HermiteSplinePoint (ImGui::GetID (&points[i]), offset, scale,
-                    selected_point == i, curr, next))
+                auto spline = &splines[selected_spline];
+                for_range (i, 0, spline->knots.count)
                 {
-                    selected_point = i;
-                }
+                    auto knot = &spline->knots[i];
 
-                points[i].location = clamp (points[i].location, params.XRange.x, params.XRange.y);
-                points[i].value    = clamp (points[i].value, params.YRange.x, params.YRange.y);
+                    ImGuiExt::HermiteSplinePointValues curr = {&knot->x, &knot->y, &knot->derivative};
+                    ImGuiExt::HermiteSplinePointValues next = {};
+                    if (i != spline->knots.count - 1)
+                    {
+                        auto next_knot = &spline->knots[i + 1];
+                        next = {&next_knot->x, &next_knot->y, &next_knot->derivative};
+                    }
+
+                    if (ImGuiExt::HermiteSplinePoint (ImGui::GetID (knot), offset, scale, selected_point == i, curr, next))
+                        selected_point = i;
+
+                    if (ImGuiExt::IsItemDoubleClicked (ImGuiMouseButton_Left))
+                    {
+                        if (knot->is_nested_spline)
+                        {
+                            selected_spline = cast (int) (knot->spline - splines.data);
+                        }
+                        else
+                        {
+                            knot->is_nested_spline = true;
+                            knot->spline = array_push (&splines);
+                            selected_spline = splines.count - 1;
+                        }
+                    }
+
+                    knot->x = clamp (knot->x, params.XRange.x, params.XRange.y);
+                    knot->y = clamp (knot->y, params.YRange.x, params.YRange.y);
+                }
             }
         }
 
-        if (!ImGui::IsAnyItemHovered () && ImGui::IsWindowHovered () && ImGui::IsMouseDoubleClicked (ImGuiMouseButton_Left))
+        if (selected_spline >= 0 && !ImGui::IsAnyItemHovered () && ImGui::IsWindowHovered () && ImGui::IsMouseDoubleClicked (ImGuiMouseButton_Left))
         {
-            auto *pt = &points[point_count];
-            point_count += 1;
+            auto spline = &splines[selected_spline];
+            auto *pt = array_push (&spline->knots);
 
-            auto mouse_pos = ImGui::GetMousePos ();
-            mouse_pos -= ImGui::GetWindowPos ();
+            auto mouse_pos = ImGui::GetMousePos () - ImGui::GetWindowPos ();
 
-            pt->location = mouse_pos.x;
-            pt->value = mouse_pos.y;
             ImGuiExt::WindowToPanZoom (offset, scale, &mouse_pos, null, false);
+            pt->x = mouse_pos.x;
+            pt->y = mouse_pos.y;
             pt->derivative = 0;
         }
 
         ImGuiExt::EndHermiteSpline ();
+
+        ImGui::NextColumn ();
+
+        if (selected_spline >= 0 && selected_point >= 0)
+        {
+            auto spline = &splines[selected_spline];
+            auto point = &spline->knots[selected_point];
+
+            float v_min = -1.0f;
+            float v_max = 1.0f;
+            ImGui::DragScalar ("Location", ImGuiDataType_Float, &point->x, 0.01f, &v_min, &v_max, "%.2f");
+            ImGui::DragScalar ("Value", ImGuiDataType_Float, &point->y, 0.01f, &v_min, &v_max, "%.2f");
+
+            v_min = -100.0f;
+            v_max = 100.0f;
+            ImGui::DragScalar ("Derivative", ImGuiDataType_Float, &point->derivative, 0.01f, &v_min, &v_max, "%.2f");
+        }
+
+        ImGui::Columns ();
     }
     ImGui::End ();
 }
