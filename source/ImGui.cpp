@@ -153,35 +153,45 @@ namespace ImGuiExt
         // Draw grid
         if (!(flags & PanZoomViewFlags_NoGrid))
         {
-            static const int GridSize = 10;
+            ImVec2 min = ImVec2{0, 0};
+            WindowToPanZoom (*offset, *scale, &min, NULL, y_down);
 
-            ImVec2 grid_cell_size = ImVec2{GridSize, GridSize};
-            PanZoomToWindow (*offset, *scale, NULL, &grid_cell_size, y_down);
+            ImVec2 max = ImGui::GetWindowSize ();
+            WindowToPanZoom (*offset, *scale, &max, NULL, y_down);
 
-            if (grid_cell_size.x > 0 && grid_cell_size.y > 0)
+            ImVec2 min_by_grid = ImVec2{
+                ImFloor (min.x / extra.GridCellSize) * extra.GridCellSize,
+                ImFloor (min.y / extra.GridCellSize) * extra.GridCellSize
+            };
+            PanZoomToWindow (*offset, *scale, &min_by_grid, NULL, y_down);
+
+            ImVec2 max_by_grid = ImVec2{
+                ImFloor (max.x / extra.GridCellSize) * extra.GridCellSize,
+                ImFloor (max.y / extra.GridCellSize) * extra.GridCellSize
+            };
+            PanZoomToWindow (*offset, *scale, &max_by_grid, NULL, y_down);
+
+            PanZoomToWindow (*offset, *scale, &min, NULL, y_down);
+            PanZoomToWindow (*offset, *scale, &max, NULL, y_down);
+
+            float cell_size = extra.GridCellSize * *scale;
+
+            if (cell_size > 0)
             {
-                for (float i = grid_cell_size.x; i <= size.x - grid_cell_size.x; i += grid_cell_size.x)
+                for (float i = min_by_grid.x; i <= max_by_grid.x + 0.001f; i += cell_size)
                 {
-                    ImVec2 pos = {i, 0.0f};
-                    PanZoomToWindow (*offset, *scale, &pos, NULL, y_down);
-                    pos = ImFloor (pos);
-
                     draw_list->AddLine (
-                        ImVec2{bounds.Min.x + pos.x, bounds.Min.y},
-                        ImVec2{bounds.Min.x + pos.x, bounds.Max.y},
+                        ImVec2{bounds.Min.x + ImFloor (i), bounds.Min.y + ImFloor (min.y)},
+                        ImVec2{bounds.Min.x + ImFloor (i), bounds.Min.y + ImFloor (max.y)},
                         ImGui::GetColorU32 (ImGuiCol_TextDisabled)
                     );
                 }
 
-                for (float i = grid_cell_size.y; i <= size.y - grid_cell_size.y; i += grid_cell_size.y)
+                for (float i = min_by_grid.y; i <= max_by_grid.y + 0.001f; i += cell_size)
                 {
-                    ImVec2 pos = {0.0f, i};
-                    PanZoomToWindow (*offset, *scale, &pos, NULL, y_down);
-                    pos = ImFloor (pos);
-
                     draw_list->AddLine (
-                        ImVec2{bounds.Min.x, bounds.Min.y + pos.y},
-                        ImVec2{bounds.Max.x, bounds.Min.y + pos.y},
+                        ImVec2{bounds.Min.x + ImFloor (min.x), bounds.Min.y + ImFloor (i)},
+                        ImVec2{bounds.Min.x + ImFloor (max.x), bounds.Min.y + ImFloor (i)},
                         ImGui::GetColorU32 (ImGuiCol_TextDisabled)
                     );
                 }
