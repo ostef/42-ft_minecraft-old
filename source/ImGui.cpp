@@ -412,14 +412,16 @@ namespace ImGuiExt
         };
 
         bool hovered, held;
+        bool interact_with = !ImGui::IsAnyItemActive () || ImGui::GetActiveID () == id;
 
         ImGui::ItemAdd (box, id);
         selected |= ImGui::ButtonBehavior (box, id, &hovered, &held, ImGuiButtonFlags_NoNavFocus);
+        interact_with &= selected;
 
         if (hovered || held)
             ImGui::SetTooltip ("(%4.3f %4.3f %4.3f)", *point.location, *point.value, *point.derivative);
 
-        if (selected)
+        if (interact_with)
         {
             if (ImGui::IsKeyDown (ImGuiKey_Space))
             {
@@ -431,6 +433,7 @@ namespace ImGuiExt
                 if (!(flags & HermiteSplinePointFlags_LockValue))
                     *point.value = new_point_center.y;
 
+                ImGui::SetActiveID (id, ImGui::GetCurrentWindow ());
                 ImGui::SetTooltip ("(%4.3f %4.3f %4.3f)", *point.location, *point.value, *point.derivative);
             }
             else if (ImGui::IsKeyDown (ImGuiKey_LeftShift))
@@ -448,6 +451,7 @@ namespace ImGuiExt
                         *point.derivative = -ImClamp (dy / dx, -100.0f, 100.0f);
                 }
 
+                ImGui::SetActiveID (id, ImGui::GetCurrentWindow ());
                 ImGui::SetTooltip ("(%4.3f %4.3f %4.3f)", *point.location, *point.value, *point.derivative);
             }
         }
