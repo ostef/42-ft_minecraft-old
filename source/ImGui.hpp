@@ -76,6 +76,7 @@ namespace ImGuiExt
         PanZoomViewFlags_PanOnLeftMouse = 0x04,
         PanZoomViewFlags_PanOnMiddleMouse = 0x08,
         PanZoomViewFlags_PanOnRightMouse = 0x10,
+        PanZoomViewFlags_DownwardsYAxis = 0x20,
 
         PanZoomViewFlags_Default = PanZoomViewFlags_PanOnMiddleMouse,
     };
@@ -86,6 +87,9 @@ namespace ImGuiExt
 
     void EndPanZoomView ();
 
+    void PanZoomToWindow (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size, bool y_down);
+    void WindowToPanZoom (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size, bool y_down);
+
     void AddDottedLine (ImDrawList *draw_list, const ImVec2 &a, const ImVec2 &b, float spacing, ImU32 color, float thickness = 1.0f);
     void AddDashedLine (ImDrawList *draw_list, const ImVec2 &a, const ImVec2 &b, float line_len, float spacing, ImU32 color, float thickness = 1.0f);
 
@@ -94,9 +98,6 @@ namespace ImGuiExt
     void AddHermiteCubic (ImDrawList *draw_list,
         float x0, float y0, float der0, float x1, float y1, float der1,
         ImU32 color, float thickness = 1.0f, int num_segments = 64);
-
-    void PanZoomToWindow (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size);
-    void WindowToPanZoom (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size);
 
     struct HermiteSplineParams
     {

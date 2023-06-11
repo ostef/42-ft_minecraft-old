@@ -744,9 +744,9 @@ void ui_show_windows ()
             auto mouse_pos = ImGui::GetMousePos ();
             mouse_pos -= ImGui::GetWindowPos ();
 
-            ImGuiExt::WindowToPanZoom (offset, scale, &mouse_pos, null);
             pt->location = mouse_pos.x;
             pt->value = mouse_pos.y;
+            ImGuiExt::WindowToPanZoom (offset, scale, &mouse_pos, null, false);
             pt->derivative = 0;
         }
 

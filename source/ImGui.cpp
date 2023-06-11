@@ -73,6 +73,7 @@ namespace ImGuiExt
         if (!ImGui::BeginChild (str_id, size, border, window_flags))
             return false;
 
+        bool y_down = (flags & PanZoomViewFlags_DownwardsYAxis) != 0;
         bool dragging = false;
         ImGuiMouseButton dragging_with_button = 0;
         if (ImGui::IsWindowHovered ())
@@ -120,7 +121,7 @@ namespace ImGuiExt
         }
 
         ImVec2 mouse_before_zoom = mouse_pos;
-        WindowToPanZoom (*offset, *scale, &mouse_before_zoom, NULL);
+        WindowToPanZoom (*offset, *scale, &mouse_before_zoom, NULL, y_down);
 
         if (ImGui::IsWindowHovered ())
         {
@@ -134,9 +135,13 @@ namespace ImGuiExt
         *scale = ImClamp (*scale, extra.ScaleRange.x, extra.ScaleRange.y);
 
         ImVec2 mouse_after_zoom = mouse_pos;
-        WindowToPanZoom (*offset, *scale, &mouse_after_zoom, NULL);
+        WindowToPanZoom (*offset, *scale, &mouse_after_zoom, NULL, y_down);
 
-        *offset -= (mouse_after_zoom - mouse_before_zoom);
+        offset->x -= mouse_after_zoom.x - mouse_before_zoom.x;
+        if (flags & PanZoomViewFlags_DownwardsYAxis)
+            offset->y -= mouse_after_zoom.y - mouse_before_zoom.y;
+        else
+            offset->y += mouse_after_zoom.y - mouse_before_zoom.y;
 
         *offset = ImClamp (*offset,
             {extra.XOffsetRange.x, extra.YOffsetRange.x},
@@ -151,14 +156,14 @@ namespace ImGuiExt
             static const int GridSize = 10;
 
             ImVec2 grid_cell_size = ImVec2{GridSize, GridSize};
-            PanZoomToWindow (*offset, *scale, NULL, &grid_cell_size);
+            PanZoomToWindow (*offset, *scale, NULL, &grid_cell_size, y_down);
 
             if (grid_cell_size.x > 0 && grid_cell_size.y > 0)
             {
                 for (float i = grid_cell_size.x; i <= size.x - grid_cell_size.x; i += grid_cell_size.x)
                 {
                     ImVec2 pos = {i, 0.0f};
-                    PanZoomToWindow (*offset, *scale, &pos, NULL);
+                    PanZoomToWindow (*offset, *scale, &pos, NULL, y_down);
                     pos = ImFloor (pos);
 
                     draw_list->AddLine (
@@ -171,7 +176,7 @@ namespace ImGuiExt
                 for (float i = grid_cell_size.y; i <= size.y - grid_cell_size.y; i += grid_cell_size.y)
                 {
                     ImVec2 pos = {0.0f, i};
-                    PanZoomToWindow (*offset, *scale, &pos, NULL);
+                    PanZoomToWindow (*offset, *scale, &pos, NULL, y_down);
                     pos = ImFloor (pos);
 
                     draw_list->AddLine (
@@ -191,12 +196,16 @@ namespace ImGuiExt
         ImGui::EndChild ();
     }
 
-    void PanZoomToWindow (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size)
+    void PanZoomToWindow (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size, bool y_down)
     {
         if (inout_pos)
         {
             inout_pos->x = (inout_pos->x - offset.x) * scale;
-            inout_pos->y = (inout_pos->y - offset.y) * scale;
+
+            if (y_down)
+                inout_pos->y = (inout_pos->y - offset.y) * scale;
+            else
+                inout_pos->y = 1 - (inout_pos->y + offset.y) * scale;
         }
 
         if (inout_size)
@@ -206,12 +215,15 @@ namespace ImGuiExt
         }
     }
 
-    void WindowToPanZoom (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size)
+    void WindowToPanZoom (const ImVec2 &offset, float scale, ImVec2 *inout_pos, ImVec2 *inout_size, bool y_down)
     {
         if (inout_pos)
         {
             inout_pos->x = inout_pos->x / scale + offset.x;
-            inout_pos->y = inout_pos->y / scale + offset.y;
+            if (y_down)
+                inout_pos->y = inout_pos->y / scale + offset.y;
+            else
+                inout_pos->y = -(inout_pos->y - 1) / scale - offset.y;
         }
 
         if (inout_size)
@@ -253,25 +265,25 @@ namespace ImGuiExt
                 extra.XRange.x,
                 extra.YRange.x
             };
-            PanZoomToWindow (*offset, *scale, &min, NULL);
+            PanZoomToWindow (*offset, *scale, &min, NULL, false);
 
             ImVec2 max = ImVec2{
                 extra.XRange.y,
                 extra.YRange.y
             };
-            PanZoomToWindow (*offset, *scale, &max, NULL);
+            PanZoomToWindow (*offset, *scale, &max, NULL, false);
 
             ImVec2 min_by_grid = ImVec2{
                 ImFloor (extra.XRange.x / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize,
-                ImFloor (extra.YRange.x / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize
+                ImFloor (extra.YRange.y / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize
             };
-            PanZoomToWindow (*offset, *scale, &min_by_grid, NULL);
+            PanZoomToWindow (*offset, *scale, &min_by_grid, NULL, false);
 
             ImVec2 max_by_grid = ImVec2{
                 ImFloor (extra.XRange.y / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize,
-                ImFloor (extra.YRange.y / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize
+                ImFloor (extra.YRange.x / extra.ViewParams.GridCellSize) * extra.ViewParams.GridCellSize
             };
-            PanZoomToWindow (*offset, *scale, &max_by_grid, NULL);
+            PanZoomToWindow (*offset, *scale, &max_by_grid, NULL, false);
 
             float cell_size = extra.ViewParams.GridCellSize * *scale;
 
@@ -297,7 +309,7 @@ namespace ImGuiExt
             }
 
             ImVec2 origin = {};
-            PanZoomToWindow (*offset, *scale, &origin, NULL);
+            PanZoomToWindow (*offset, *scale, &origin, NULL, false);
 
             draw_list->AddLine (
                 ImVec2{bounds.Min.x + ImFloor (origin.x), bounds.Min.y + ImFloor (min.y)},
@@ -334,7 +346,7 @@ namespace ImGuiExt
                 ImFormatStringToTempBuffer (&text, NULL, "%.1f", i);
 
                 ImVec2 pos = {i, 0.0f};
-                PanZoomToWindow (*offset, *scale, &pos, NULL);
+                PanZoomToWindow (*offset, *scale, &pos, NULL, false);
 
                 auto text_size = ImGui::CalcTextSize (text);
                 pos.x += bounds.Min.x - text_size.x * 0.5;
@@ -361,7 +373,7 @@ namespace ImGuiExt
                 ImFormatStringToTempBuffer (&text, NULL, "%.1f", i);
 
                 ImVec2 pos = {0.0f, i};
-                PanZoomToWindow (*offset, *scale, &pos, NULL);
+                PanZoomToWindow (*offset, *scale, &pos, NULL, false);
 
                 auto text_size = ImGui::CalcTextSize (text);
                 pos.x = bounds.Min.x;
@@ -392,7 +404,7 @@ namespace ImGuiExt
         auto original_der = *point.derivative;
 
         auto point_center = ImVec2{*point.location, *point.value};
-        PanZoomToWindow (offset, scale, &point_center, NULL);
+        PanZoomToWindow (offset, scale, &point_center, NULL, false);
 
         auto box = ImRect{
             window_pos + point_center - ImVec2{GrabRadius, GrabRadius},
@@ -412,7 +424,7 @@ namespace ImGuiExt
             if (ImGui::IsKeyDown (ImGuiKey_Space))
             {
                 auto new_point_center = ImGui::GetMousePos () - window_pos;
-                WindowToPanZoom (offset, scale, &new_point_center, NULL);
+                WindowToPanZoom (offset, scale, &new_point_center, NULL, false);
 
                 if (!(flags & HermiteSplinePointFlags_LockLocation))
                     *point.location = new_point_center.x;
@@ -424,13 +436,16 @@ namespace ImGuiExt
             else if (ImGui::IsKeyDown (ImGuiKey_LeftShift))
             {
                 auto mouse_pos = ImGui::GetMousePos () - window_pos;
-                WindowToPanZoom (offset, scale, &mouse_pos, NULL);
+                WindowToPanZoom (offset, scale, &mouse_pos, NULL, false);
 
                 if (!(flags & HermiteSplinePointFlags_LockDerivative))
                 {
                     float dx = mouse_pos.x - *point.location;
                     float dy = mouse_pos.y - *point.value;
-                    *point.derivative = ImClamp (dy / dx, -10.0f, 10.0f);
+                    if (ImAbs (dx) < 0.0001f)
+                        *point.derivative = 0;
+                    else
+                        *point.derivative = -ImClamp (dy / dx, -100.0f, 100.0f);
                 }
 
                 ImGui::SetTooltip ("(%4.3f %4.3f %4.3f)", *point.location, *point.value, *point.derivative);
@@ -439,6 +454,7 @@ namespace ImGuiExt
 
         auto draw_list = ImGui::GetWindowDrawList ();
 
+        // Draw tangent
         if (selected)
         {
             static const float TangentLength = 2;
@@ -447,12 +463,12 @@ namespace ImGuiExt
 
             ImVec2 t0 = ImVec2{
                 -1,
-                -original_der
+                original_der
             };
 
             ImVec2 t1 = ImVec2{
                 1,
-                original_der
+                -original_der
             };
 
             t0 *= TangentLength * 0.5f / ImSqrt (ImLengthSqr (t0));
@@ -461,9 +477,9 @@ namespace ImGuiExt
             t1 *= TangentLength * 0.5f / ImSqrt (ImLengthSqr (t1));
             t1 += p0;
 
-            PanZoomToWindow (offset, scale, &p0, NULL);
-            PanZoomToWindow (offset, scale, &t0, NULL);
-            PanZoomToWindow (offset, scale, &t1, NULL);
+            PanZoomToWindow (offset, scale, &p0, NULL, false);
+            PanZoomToWindow (offset, scale, &t0, NULL, false);
+            PanZoomToWindow (offset, scale, &t1, NULL, false);
 
             p0 += window_pos;
             t0 += window_pos;
@@ -478,8 +494,8 @@ namespace ImGuiExt
             auto p0 = ImVec2{original_loc, original_val};
             auto p1 = ImVec2{*next.location, *next.value};
 
-            PanZoomToWindow (offset, scale, &p0, NULL);
-            PanZoomToWindow (offset, scale, &p1, NULL);
+            PanZoomToWindow (offset, scale, &p0, NULL, false);
+            PanZoomToWindow (offset, scale, &p1, NULL, false);
 
             p0 += window_pos;
             p1 += window_pos;
