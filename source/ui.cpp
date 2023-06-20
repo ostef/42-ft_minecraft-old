@@ -294,6 +294,7 @@ void ui_show_terrain_noise_maps (bool generate = false)
     static GLuint continentalness_tex;
     static GLuint erosion_tex;
     static GLuint weirdness_tex;
+    static GLuint ridges_tex;
     static GLuint surface_tex;
 
     static const f32 Scale = 1;
@@ -304,7 +305,7 @@ void ui_show_terrain_noise_maps (bool generate = false)
     auto child_height = ImGui::GetContentRegionAvail ().y - lines * ImGui::GetFrameHeightWithSpacing ();
     if (ImGui::BeginChild ("Noise Maps", {0, child_height}, true, ImGuiWindowFlags_HorizontalScrollbar))
     {
-        int column_count = clamp (cast (int) (ImGui::GetContentRegionAvail ().x / (size * Chunk_Size * Scale)), 1, 4);
+        int column_count = clamp (cast (int) (ImGui::GetContentRegionAvail ().x / (size * Chunk_Size * Scale)), 1, 5);
         ImGui::Columns (column_count, 0, false);
 
         ImGui::Text ("Continentalness");
@@ -319,6 +320,10 @@ void ui_show_terrain_noise_maps (bool generate = false)
         ImGui::Image (cast (ImTextureID) weirdness_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
 
+        ImGui::Text ("Ridges");
+        ImGui::Image (cast (ImTextureID) ridges_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
+        ImGui::NextColumn ();
+
         ImGui::Text ("Surface");
         ImGui::Image (cast (ImTextureID) surface_tex, {size * Chunk_Size * Scale, size * Chunk_Size * Scale});
         ImGui::NextColumn ();
@@ -327,7 +332,7 @@ void ui_show_terrain_noise_maps (bool generate = false)
     }
     ImGui::EndChild ();
 
-    if (!continentalness_tex || !erosion_tex || !weirdness_tex || !surface_tex)
+    if (!continentalness_tex || !erosion_tex || !weirdness_tex || !ridges_tex || !surface_tex)
         generate = true;
 
     if (ImGui::SliderInt ("Size", &size, 1, 100))
@@ -349,6 +354,10 @@ void ui_show_terrain_noise_maps (bool generate = false)
         generate_terrain_value_texture (&weirdness_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
             size, Terrain_Value_Weirdness);
+
+        generate_terrain_value_texture (&ridges_tex,
+            cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
+            size, Terrain_Value_Ridges);
 
         generate_terrain_value_texture (&surface_tex,
             cast (int) (g_camera.position.x / Chunk_Size), cast (int) (g_camera.position.z / Chunk_Size),
@@ -445,18 +454,15 @@ void ui_show_terrain_params_editor (Terrain_Params *params)
 
 void ui_show_advanced_world_settings ()
 {
-    static Terrain_Params world_params;
-
-    //ui_show_terrain_params_editor (&world_params);
-
     ImGui::Separator ();
 
     bool generated = false;
 
     if (ImGui::Button ("Generate New"))
     {
+        auto params = g_world.terrain_params;
         world_clear_chunks (&g_world);
-        world_init (&g_world, random_get_s32 (), g_render_distance / 2 + 1, world_params);
+        world_init (&g_world, random_get_s32 (), g_render_distance / 2 + 1, params);
         generated = true;
     }
 
@@ -464,8 +470,9 @@ void ui_show_advanced_world_settings ()
 
     if (ImGui::Button ("Regenerate"))
     {
+        auto params = g_world.terrain_params;
         world_clear_chunks (&g_world);
-        world_init (&g_world, g_world.seed, g_render_distance / 2 + 1, world_params);
+        world_init (&g_world, g_world.seed, g_render_distance / 2 + 1, params);
         generated = true;
     }
 }
@@ -551,7 +558,7 @@ void ui_show_cubiomes_viewer (bool *opened)
                     // s64 np[6];
                     // cubiome::sampleBiomeNoise (&gen.bn, np, i, 0, j, null, 0);
                     // float y = np[cubiome::NP_WEIRDNESS
-                    y = -3.0F * ( fabsf( fabsf(y) - 0.6666667F ) - 0.33333334F );
+                    //y = -3.0F * ( fabsf( fabsf(y) - 0.6666667F ) - 0.33333334F );
                     y = inverse_lerp (-1.0f, 1.0f, y);
 
                     pixels[j * size + i] = ImGui::ColorConvertFloat4ToU32 (ImVec4{y, y, y, 1});
@@ -831,6 +838,16 @@ bool ui_surface_splines_editor (const char *str_id, Terrain_Params *params,
 
     for_array (i, t_values)
         ImGui::SliderFloat (TValue_Names[i], &t_values[i], 0, 1);
+
+    ImGui::SliderInt ("Min Height", &params->height_range.x, 0, params->height_range.y);
+    ImGui::SliderInt ("Max Height", &params->height_range.y, params->height_range.x, Chunk_Height);
+    ImGui::SliderInt ("Water Level", &params->water_level, 0, Chunk_Height);
+
+    if (ImGui::Button ("Generate"))
+    {
+        world_clear_chunks (&g_world);
+        world_init (&g_world, random_get_s32 (), g_render_distance / 2 + 1, *params);
+    }
 
     ImGui::Columns ();
 
