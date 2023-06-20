@@ -544,6 +544,8 @@ T *array_push (Array<T> *arr)
     T *result = &arr->data[arr->count];
     arr->count += 1;
 
+    *result = {};
+
     return result;
 }
 
@@ -554,6 +556,8 @@ T *array_push (Static_Array<T, N> *arr)
 
     T *result = &arr->data[arr->count];
     arr->count += 1;
+
+    *result = {};
 
     return result;
 }
@@ -602,6 +606,7 @@ T *array_ordered_insert (Array<T> *arr, s64 index)
         arr->data[i] = arr->data[i - 1];
 
     arr->count += 1;
+    arr->data[index] = {};
 
     return &arr->data[index];
 }
@@ -616,6 +621,7 @@ T *array_ordered_insert (Static_Array<T, N> *arr, s64 index)
         arr->data[i] = arr->data[i - 1];
 
     arr->count += 1;
+    arr->data[index] = {};
 
     return &arr->data[index];
 }
@@ -1102,6 +1108,32 @@ String get_executable_path ();
 String get_error_string (u32 error_code);
 String get_last_error_string ();
 void sleep_milliseconds (u32 ms);
+
+typedef s32 (*Thread_Proc) (struct Thread *);
+
+struct Thread
+{
+
+#if defined(PLATFORM_WINDOWS)
+    void *handle;
+    s32 id;
+#endif
+
+    Thread_Proc proc;
+    void *data;
+    Arena thread_arena;
+    Allocator thread_allocator;
+};
+
+bool thread_init (Thread *thread, Thread_Proc proc, void *data, s64 starting_arena_size = 4096);
+void thread_cleanup (Thread *thread);
+void thread_start (Thread *thread);
+void thread_stop (Thread *thread);
+
+enum { Thread_Wait_Infinite = -1 };
+
+void thread_wait (Thread *thread, s32 milliseconds = Thread_Wait_Infinite);
+void thread_wait_multiple (Slice<Thread *> threads, s32 milliseconds = Thread_Wait_Infinite);
 
 // Debug
 
