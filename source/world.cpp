@@ -127,6 +127,17 @@ void chunk_generate_cubiome (World *world, Chunk *chunk)
             auto values = &chunk->terrain_values[x * Chunk_Size + z];
             s64 np[6];
             cubiome::sampleBiomeNoise (&world->cubiome_gen.bn, np, sample_x, 0, sample_z, null, 0);
+
+            values->noise[0] = cast (float) np[cubiome::NP_CONTINENTALNESS] / 10000.0f;
+            values->noise[1] = cast (float) np[cubiome::NP_EROSION] / 10000.0f;
+            values->noise[2] = cast (float) np[cubiome::NP_WEIRDNESS] / 10000.0f;
+            values->noise[3] = -3.0f * (fabsf (fabsf (values->noise[2]) - 0.6666667f) - 0.33333334f);
+
+            values->noise[0] = inverse_lerp (-1.0f, 1.0f, values->noise[0]);
+            values->noise[1] = inverse_lerp (-1.0f, 1.0f, values->noise[1]);
+            values->noise[2] = inverse_lerp (-1.0f, 1.0f, values->noise[2]);
+            values->noise[3] = inverse_lerp (-1.0f, 1.0f, values->noise[3]);
+
             values->surface_level = 64 + np[cubiome::NP_DEPTH] / 76.0;
         }
     }
@@ -154,7 +165,8 @@ void chunk_generate_mine (World *world, Chunk *chunk)
             values->noise[1] = inverse_lerp (-max_amplitude[1], max_amplitude[1], values->noise[1]);
             values->noise[2] = inverse_lerp (-max_amplitude[2], max_amplitude[2], values->noise[2]);
 
-            values->noise[3] = -3.0f * (fabsf (fabsf (values->noise[2]) - 0.6666667f) - 0.33333334f);
+            values->noise[3] = values->noise[2] * 2 - 1;
+            values->noise[3] = -3.0f * (fabsf (fabsf (values->noise[3]) - 0.6666667f) - 0.33333334f);
             values->noise[3] = inverse_lerp (-1.0f, 1.0f, values->noise[3]);
 
             values->surface_level = hermite_cubic_calculate (world->terrain_params.surface_spline, slice_make (array_size (values->noise), values->noise));
