@@ -73,7 +73,7 @@ struct Nested_Hermite_Spline
         f32 derivative;
     };
 
-    static const int Max_Knots = 12;
+    static const int Max_Knots = 20;
 
     int t_value_index;  // Index into an array of T values
     Static_Array<Knot, Max_Knots> knots;
@@ -208,6 +208,7 @@ enum Terrain_Value
     Terrain_Value_Continentalness,
     Terrain_Value_Erosion,
     Terrain_Value_Weirdness,
+    Terrain_Value_Ridges,
     Terrain_Value_Surface,
     Terrain_Value_Count,
 };
@@ -221,8 +222,9 @@ struct Terrain_Values
             f32 continentalness;
             f32 erosion;
             f32 weirdness;
+            f32 ridges;
         };
-        f32 noise[3];
+        f32 noise[4];
     };
 
     f32 surface_level;
@@ -239,8 +241,8 @@ struct Terrain_Params
     Vec2i height_range = Default_Height_Range;
     int water_level = Default_Water_Level;
 
-    Nested_Hermite_Spline *spline;
-    Static_Array<Nested_Hermite_Spline, 30> spline_stack;
+    Nested_Hermite_Spline *surface_spline;
+    Static_Array<Nested_Hermite_Spline, 60> spline_stack;
 };
 
 void init_default_spline (Terrain_Params *params);

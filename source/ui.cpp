@@ -591,7 +591,7 @@ void calculate_spline_range (Nested_Hermite_Spline *sp, Vec2f *x, Vec2f *y)
     }
 }
 
-void convert_cubiome_spline (cubiome::Spline *cub_sp, Nested_Hermite_Spline *sp)
+void convert_cubiome_spline (cubiome::Spline *cub_sp, Nested_Hermite_Spline *sp, Terrain_Params *params)
 {
     f32 x_min = F32_MAX;
     f32 x_max = -F32_MAX;
@@ -602,6 +602,8 @@ void convert_cubiome_spline (cubiome::Spline *cub_sp, Nested_Hermite_Spline *sp)
     }
 
     sp->t_value_index = cub_sp->typ;
+    if (sp->t_value_index == 2)
+        sp->t_value_index = 3;
     for_range (i, 0, cub_sp->len)
     {
         Nested_Hermite_Spline::Knot knot {};
@@ -616,8 +618,8 @@ void convert_cubiome_spline (cubiome::Spline *cub_sp, Nested_Hermite_Spline *sp)
         else
         {
             knot.is_nested_spline = true;
-            knot.spline = mem_alloc_typed (Nested_Hermite_Spline, 1, heap_allocator ());
-            convert_cubiome_spline (cub_sp->val[i], knot.spline);
+            knot.spline = array_push (&params->spline_stack);
+            convert_cubiome_spline (cub_sp->val[i], knot.spline, params);
         }
 
         array_push (&sp->knots, knot);
@@ -633,6 +635,206 @@ void fix_spline_range (Nested_Hermite_Spline *sp, f32 x_min, f32 x_max, f32 y_mi
         if (sp->knots[i].is_nested_spline)
             fix_spline_range (sp->knots[i].spline, x_min, x_max, y_min, y_max);
     }
+}
+
+void print_spline_init_code (String_Builder *builder, const Nested_Hermite_Spline *spline)
+{
+    int spline_id = cast (int) cast (s64) (spline) & 0xffff;
+
+    string_builder_append_line (builder, "auto spline_%d = spline_push (params, %d);", spline_id, spline->t_value_index);
+
+    for_array (i, spline->knots)
+    {
+        auto knot = spline->knots[i];
+        if (knot.is_nested_spline)
+        {
+            print_spline_init_code (builder, knot.spline);
+            string_builder_append_line (builder, "spline_push_value (spline_%d, %f, %f, spline_%d);",
+                spline_id, knot.derivative, knot.x, cast (int) cast (s64) (knot.spline) & 0xffff);
+        }
+        else
+        {
+            string_builder_append_line (builder, "spline_push_value (spline_%d, %f, %f, %f);",
+                spline_id, knot.derivative, knot.x, knot.y);
+        }
+    }
+}
+
+bool ui_surface_splines_editor (const char *str_id, Terrain_Params *params,
+    ImVec2 *offset, float *scale, int *selected_spline, int *selected_knot,
+    Slice<float> &t_values)
+{
+    ImGuiExt::HermiteSplineParams spline_params = ImGuiExt::HermiteSplineParams_Default;
+    spline_params.ViewParams.ScaleRange.y = 1000.0f;
+
+    if (ImGui::Button ("Reset to Cubiome Settings") || params->spline_stack.count == 0)
+    {
+        array_clear (&params->spline_stack);
+        auto spline = array_push (&params->spline_stack);
+        params->surface_spline = spline;
+        *selected_spline = 0;
+
+        // Generate cubiome splines
+        cubiome::Generator gen;
+        cubiome::setupGenerator (&gen, cubiome::MC_1_20, 0);
+        convert_cubiome_spline (gen.bn.sp, spline, params);
+
+        Vec2f x_range = {F32_MAX, -F32_MAX};
+        Vec2f y_range = {F32_MAX, -F32_MAX};
+        calculate_spline_range (spline, &x_range, &y_range);
+        fix_spline_range (spline, x_range.x, x_range.y, y_range.x, y_range.y);
+    }
+
+    if (ImGui::Button ("Reset To First Spline"))
+        *selected_spline = 0;
+
+    ImGui::SameLine ();
+
+    if (ImGui::Button ("Print Spline Init Code"))
+    {
+        String_Builder builder;
+        string_builder_init (&builder, heap_allocator ());
+
+        print_spline_init_code (&builder, params->surface_spline);
+
+        auto str = string_builder_build (&builder, heap_allocator ());
+
+        print ("%.*s", fstr (str));
+    }
+
+    ImGui::Columns (2);
+
+    ImVec2 size = {ImGui::GetContentRegionAvail ().x, 500.0f};
+    if (!ImGuiExt::BeginHermiteSpline (str_id, offset, scale, size, true, 0, spline_params))
+    {
+        ImGuiExt::EndHermiteSpline ();
+
+        return false;
+    }
+
+    auto spline = &params->spline_stack[*selected_spline];
+    for_range (i, 0, spline->knots.count)
+    {
+        auto knot = &spline->knots[i];
+
+        ImGuiExt::HermiteSplineFlags flags = 0;
+        float value = 1.0f;
+        float *value_ptr;
+        float next_value;
+        if (knot->is_nested_spline)
+        {
+            value = hermite_knot_value (*knot, t_values);
+            value_ptr = &value;
+            flags |= ImGuiExt::HermiteSplinePointFlags_LockValue;
+        }
+        else
+        {
+            value_ptr = &knot->y;
+        }
+
+        ImGuiExt::HermiteSplinePointValues curr = {&knot->x, value_ptr, &knot->derivative};
+        ImGuiExt::HermiteSplinePointValues next = {};
+        if (i != spline->knots.count - 1)
+        {
+            auto next_knot = &spline->knots[i + 1];
+            if (next_knot->is_nested_spline)
+                next_value = hermite_knot_value (*next_knot, t_values);
+            else
+                next_value = next_knot->y;
+
+            next = {&next_knot->x, &next_value, &next_knot->derivative};
+        }
+
+        if (knot->is_nested_spline)
+        {
+            ImGui::PushStyleColor (ImGuiCol_Button,        {1.0f, 0.647f, 0.012f, 1.0f});
+            ImGui::PushStyleColor (ImGuiCol_ButtonHovered, {1.0f, 0.647f, 0.012f, 1.0f});
+            ImGui::PushStyleColor (ImGuiCol_ButtonActive,  {1.0f, 0.647f, 0.012f, 1.0f});
+        }
+
+        if (ImGuiExt::HermiteSplinePoint (ImGui::GetID (knot), *offset, *scale, *selected_knot == i, curr, next))
+            *selected_knot = i;
+
+        if (knot->is_nested_spline)
+        {
+            ImGui::PopStyleColor (3);
+        }
+
+        if (i == 0 && i != spline->knots.count - 1)
+            knot->x = min (knot->x, spline->knots[i + 1].x);
+        else if (i == spline->knots.count - 1 && i != 0)
+            knot->x = max (knot->x, spline->knots[i - 1].x);
+        else if (i > 0 && i < spline->knots.count - 1)
+            knot->x = clamp (knot->x, spline->knots[i - 1].x, spline->knots[i + 1].x);
+
+        if (ImGuiExt::IsItemDoubleClicked (ImGuiMouseButton_Left))
+        {
+            if (knot->is_nested_spline)
+            {
+                *selected_spline = cast (int) (knot->spline - params->spline_stack.data);
+            }
+            else
+            {
+                knot->is_nested_spline = true;
+                knot->spline = array_push (&params->spline_stack);
+                *selected_spline = params->spline_stack.count - 1;
+            }
+        }
+
+        knot->x = clamp (knot->x, 0.0f, 1.0f);
+        knot->y = clamp (knot->y, 0.0f, 1.0f);
+
+        if (*selected_knot == i && ImGui::IsKeyPressed (ImGuiKey_Delete))
+        {
+            array_ordered_remove (&spline->knots, i);
+        }
+    }
+
+    if (!ImGui::IsAnyItemHovered () && ImGui::IsWindowHovered () && ImGui::IsMouseClicked (ImGuiMouseButton_Left))
+        *selected_knot = -1;
+
+    if (*selected_spline >= 0 && !ImGui::IsAnyItemHovered () && ImGui::IsWindowHovered () && ImGui::IsMouseDoubleClicked (ImGuiMouseButton_Left))
+    {
+        auto mouse_pos = ImGui::GetMousePos () - ImGui::GetWindowPos ();
+        ImGuiExt::WindowToPanZoom (*offset, *scale, &mouse_pos, null, false);
+
+        if (mouse_pos.x >= spline_params.XRange.x && mouse_pos.x <= spline_params.XRange.y
+            && mouse_pos.y >= spline_params.YRange.x && mouse_pos.y <= spline_params.YRange.y)
+        {
+            auto spline = &params->spline_stack[*selected_spline];
+
+            int insert_index = 0;
+            for_array (i, spline->knots)
+            {
+                if (spline->knots[i].x > mouse_pos.x)
+                    break;
+
+                insert_index += 1;
+            }
+
+            auto *pt = array_ordered_insert (&spline->knots, insert_index);
+
+            pt->x = mouse_pos.x;
+            pt->y = mouse_pos.y;
+            pt->is_nested_spline = false;
+            pt->derivative = 0;
+        }
+    }
+
+    ImGuiExt::EndHermiteSpline ();
+
+    ImGui::NextColumn ();
+
+    static const char *TValue_Names[] = {"Continentalness","Erosion","Weirdness","Ridges"};
+
+    ImGui::Combo ("TValue", &spline->t_value_index, TValue_Names, 4);
+
+    for_array (i, t_values)
+        ImGui::SliderFloat (TValue_Names[i], &t_values[i], 0, 1);
+
+    ImGui::Columns ();
+
+    return true;
 }
 
 void ui_show_windows ()
@@ -705,90 +907,13 @@ void ui_show_windows ()
         static const int Max_Splines = 10;
 
         static Static_Array<Nested_Hermite_Spline, Max_Splines> splines;
-        static int selected_spline = -1;
+        static int selected_spline = 0;
         static int selected_point = -1;
 
-        if (splines.count == 0)
-        {
-            array_push (&splines);
-            selected_spline = 0;
-        }
+        static float t_values[4];
 
-        ImGui::Columns (2);
-
-        if (ImGuiExt::BeginHermiteSpline ("Hermite Spline", &offset, &scale, {ImGui::GetContentRegionAvail ().x, 400}, true, 0, params))
-        {
-            if (selected_spline >= 0)
-            {
-                auto spline = &splines[selected_spline];
-                for_range (i, 0, spline->knots.count)
-                {
-                    auto knot = &spline->knots[i];
-
-                    ImGuiExt::HermiteSplinePointValues curr = {&knot->x, &knot->y, &knot->derivative};
-                    ImGuiExt::HermiteSplinePointValues next = {};
-                    if (i != spline->knots.count - 1)
-                    {
-                        auto next_knot = &spline->knots[i + 1];
-                        next = {&next_knot->x, &next_knot->y, &next_knot->derivative};
-                    }
-
-                    if (ImGuiExt::HermiteSplinePoint (ImGui::GetID (knot), offset, scale, selected_point == i, curr, next))
-                        selected_point = i;
-
-                    if (ImGuiExt::IsItemDoubleClicked (ImGuiMouseButton_Left))
-                    {
-                        if (knot->is_nested_spline)
-                        {
-                            selected_spline = cast (int) (knot->spline - splines.data);
-                        }
-                        else
-                        {
-                            knot->is_nested_spline = true;
-                            knot->spline = array_push (&splines);
-                            selected_spline = splines.count - 1;
-                        }
-                    }
-
-                    knot->x = clamp (knot->x, params.XRange.x, params.XRange.y);
-                    knot->y = clamp (knot->y, params.YRange.x, params.YRange.y);
-                }
-            }
-        }
-
-        if (selected_spline >= 0 && !ImGui::IsAnyItemHovered () && ImGui::IsWindowHovered () && ImGui::IsMouseDoubleClicked (ImGuiMouseButton_Left))
-        {
-            auto spline = &splines[selected_spline];
-            auto *pt = array_push (&spline->knots);
-
-            auto mouse_pos = ImGui::GetMousePos () - ImGui::GetWindowPos ();
-
-            ImGuiExt::WindowToPanZoom (offset, scale, &mouse_pos, null, false);
-            pt->x = mouse_pos.x;
-            pt->y = mouse_pos.y;
-            pt->derivative = 0;
-        }
-
-        ImGuiExt::EndHermiteSpline ();
-
-        ImGui::NextColumn ();
-
-        if (selected_spline >= 0 && selected_point >= 0)
-        {
-            auto spline = &splines[selected_spline];
-            auto point = &spline->knots[selected_point];
-
-            float v_min = -1.0f;
-            float v_max = 1.0f;
-            ImGui::DragScalar ("Location", ImGuiDataType_Float, &point->x, 0.01f, &v_min, &v_max, "%.2f");
-            ImGui::DragScalar ("Value", ImGuiDataType_Float, &point->y, 0.01f, &v_min, &v_max, "%.2f");
-
-            v_min = -100.0f;
-            v_max = 100.0f;
-            ImGui::DragScalar ("Derivative", ImGuiDataType_Float, &point->derivative, 0.01f, &v_min, &v_max, "%.2f");
-        }
-
-        ImGui::Columns ();
+        ui_surface_splines_editor ("Surface Spline Editor", &g_world.terrain_params,
+            &offset, &scale, &selected_spline, &selected_point, slice_make (4, t_values));
     }
     ImGui::End ();
 }
