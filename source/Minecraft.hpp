@@ -188,7 +188,7 @@ static const Block Block_Air = {};
 static const int Chunk_Size = 16;
 static const int Chunk_Height = 384;
 
-static const Vec2i Default_Height_Range = {50,200};
+static const Vec2i Default_Height_Range = {100,300};
 
 static const Perlin_Fractal_Params Default_Continentalness_Perlin_Params = { 0.001340, 3, 0.25, 1.3 };
 static const Perlin_Fractal_Params Default_Erosion_Perlin_Params = { 0.002589, 5, 0.5, 1.5 };
